@@ -32,3 +32,16 @@ def get_memory_usage(device):
     cached_memory = torch.cuda.memory_cached(device) / (1024 * 1024.)
     return allocated_memory, cached_memory
     # print('Allocated Memory: {:.2f} MB, Cached Memory: {:.2f} MB'.format(allocated_memory, cached_memory))
+
+
+# NINO3.4区（170°W-120°W，5°S-5°N）
+def nino_index(ssta_1year):
+    months = ssta_1year.shape(0)
+    nino = []
+    for i in range(months - 2):
+        ssta1 = np.mean(ssta_1year[0, i, 10:13, 38:49].values)
+        ssta2 = np.mean(ssta_1year[0, i + 1, 10:13, 38:49].values)
+        ssta3 = np.mean(ssta_1year[0, i + 2, 10:13, 38:49].values)
+        nino3_4 = (ssta1 + ssta2 + ssta3) / 3
+        nino.append(nino3_4)
+    return nino
