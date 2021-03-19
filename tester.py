@@ -4,6 +4,7 @@ import torch
 import os
 import numpy as np
 import zipfile
+from lib.util import norm
 
 
 def test(in_path='./tcdata/enso_round1_test_20210201/',
@@ -22,13 +23,14 @@ def test(in_path='./tcdata/enso_round1_test_20210201/',
     model = args['model_list'][args['model_name']]()
     current_dir = os.path.dirname(os.path.realpath(__file__))
     # print(current_dir)
-    save_dir = os.path.join(current_dir, args['model_name'] + '.pth')
+    save_dir = os.path.join(current_dir, 'experiments', args['model_name'] + '.pth')
     model.load_state_dict(torch.load(save_dir, map_location=device))
     model.to(device)
     model.eval()
 
     for i in test_sample_file:
         data = np.load(i)
+        adj = torch.tensor(norm(np.ones((4, 4))), dtype=torch.float).to(device)
         sst = torch.as_tensor(data[..., 0], dtype=torch.float).to(device).unsqueeze(0)
         t300 = torch.as_tensor(data[..., 1], dtype=torch.float).to(device).unsqueeze(0)
         ua = torch.as_tensor(data[..., 2], dtype=torch.float).to(device).unsqueeze(0)

@@ -1,20 +1,22 @@
-from model.naive_CNN import simpleCNN, simpleSpatailTimeNN
+from model.CNN.naive_CNN import simpleSpatailTimeNN
+from model.GraphCNN.graph_CNN import graphCNN
+from model.ConvRNN.convlstm import AutoCoder
 import torch
 
 args = {
-    'model_name': 'simpleSpatailTimeNN',
     'model_list': {
-        'simple_CNN': simpleCNN,
-        'simpleSpatailTimeNN': simpleSpatailTimeNN
+        'simpleSpatailTimeNN': simpleSpatailTimeNN,
+        'graphCNN': graphCNN,
+        'convLSTM': AutoCoder,
     },
     'pretrain': False,
-    'n_epochs': 200,
+    'n_epochs': 2000,
     'learning_rate': 8e-5,
     'batch_size': 64,
     'device': 'cuda:0' if torch.cuda.is_available() else 'cpu',
     'grad_norm': False,
     'max_grad_norm': 5,
-    'early_stop_patience': 20,
+    'early_stop_patience': 20000,
 
     'cmip_data': r'D:\data\enso\meta_data\CMIP_train.nc',
     'cmip_label': r'D:\data\enso\meta_data\CMIP_label.nc',

@@ -1,4 +1,4 @@
-from lib.util import init_seed, print_model_parameters
+from lib.util import init_seed, print_model_parameters, norm
 from data_loader import load_data
 from torch.utils.data import DataLoader
 import torch
@@ -7,9 +7,11 @@ from lib.metric import eval_score
 import os
 import torch.nn as nn
 from configs import args
+import numpy as np
 
+args['model_name'] = 'simpleSpatailTimeNN'
 current_dir = os.path.dirname(os.path.realpath(__file__))
-save_dir = os.path.join(current_dir, 'experiments', args['model_name'] + '.pth')
+save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '.pth')
 
 
 def train():
@@ -35,6 +37,7 @@ def train():
 
     for i in range(args['n_epochs']):
         model.train()
+        loss_epoch = 0
         for step, ((sst, t300, ua, va), label) in enumerate(train_loader):
             sst = sst.to(device).float()
             t300 = t300.to(device).float()
@@ -43,14 +46,14 @@ def train():
             optimizer.zero_grad()
             label = label.to(device).float()
             preds = model(sst, t300, ua, va)
+            # preds = model(sst, t300, ua, va, adj)
             loss = loss_fn(preds, label)
             loss.backward()
-
+            loss_epoch += loss.item()
             if args['grad_norm']:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), args['max_grad_norm'])
 
             optimizer.step()
-            # print('Step: {}, Train Loss: {}'.format(step, loss))
 
         model.eval()
         y_true, y_pred = [], []
@@ -61,6 +64,7 @@ def train():
             va = va.to(device).float()
             label = label.to(device).float()
             preds = model(sst, t300, ua, va)
+            # preds = model(sst, t300, ua, va, adj)
 
             y_pred.append(preds)
             y_true.append(label)
@@ -68,7 +72,7 @@ def train():
         y_true = torch.cat(y_true, axis=0)
         y_pred = torch.cat(y_pred, axis=0)
         sco = eval_score(y_true.cpu().detach().numpy(), y_pred.cpu().detach().numpy())
-        print('Epoch: {}, Valid Score {}'.format(i + 1, sco))
+        print('Epoch: {}, Train Loss: {}, Valid Score: {}'.format(i + 1, loss_epoch, sco))
         if sco > best_score:
             best_score = sco
             not_improved_count = 0
