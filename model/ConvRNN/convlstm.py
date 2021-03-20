@@ -65,8 +65,8 @@ convlstm_encoder_params = [
     ],
 
     [
-        CLSTM_cell(shape=(24, 72), input_channels=16, filter_size=5, num_features=64),
-        CLSTM_cell(shape=(12, 36), input_channels=64, filter_size=5, num_features=64),
+        CLSTM_cell(shape=(24, 72), input_channels=16, filter_size=3, num_features=64),
+        CLSTM_cell(shape=(12, 36), input_channels=64, filter_size=3, num_features=64),
     ]
 ]
 
@@ -80,8 +80,8 @@ convlstm_decoder_params = [
     ],
 
     [
-        CLSTM_cell(shape=(12, 36), input_channels=64, filter_size=5, num_features=64),
-        CLSTM_cell(shape=(24, 72), input_channels=64, filter_size=5, num_features=64),
+        CLSTM_cell(shape=(12, 36), input_channels=64, filter_size=3, num_features=64),
+        CLSTM_cell(shape=(24, 72), input_channels=64, filter_size=3, num_features=64),
     ]
 ]
 
@@ -152,31 +152,32 @@ class Decoder(nn.Module):
         return inputs
 
 
-class AutoCoder(nn.Module):
+class convLSTM(nn.Module):
 
-    def __init__(self, encoder, decoder):
+    def __init__(self, encoder=Encoder(convlstm_encoder_params[0], convlstm_encoder_params[1]),
+                 decoder=Decoder(convlstm_decoder_params[0], convlstm_decoder_params[1])):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
 
-    def forward(self, input):
-        state = self.encoder(input)
+    def forward(self, sst, t300, ua, va):
+        inputs = torch.stack([sst, t300, ua, va], dim=2)
+        state = self.encoder(inputs)
         output = self.decoder(state)
-        nino_indexes = nino_index(output.squeeze(2))
-        return output[:, :24], nino_indexes
+        nino_indexes = nino_index(output.squeeze(2), )
+        return output[:, :24].squeeze(2), nino_indexes
 
 
 if __name__ == '__main__':
-    encoder = Encoder(convlstm_encoder_params[0], convlstm_encoder_params[1]).cuda()
-    decoder = Decoder(convlstm_decoder_params[0], convlstm_decoder_params[1]).cuda()
-    model = AutoCoder(encoder, decoder).to('cuda')
+    devcie = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    model = convLSTM().to(devcie)
+    input1 = torch.rand(4, 12, 24, 72).to(devcie)
+    input2 = torch.rand(4, 12, 24, 72).to(devcie)
+    input3 = torch.rand(4, 12, 24, 72).to(devcie)
+    input4 = torch.rand(4, 12, 24, 72).to(devcie)
+    output, ninos = model(input1, input2, input3, input4)
 
-    input = torch.rand(4, 12, 4, 24, 72).to('cuda')
-
-    output, ninos = model(input)
     print(output.shape)
     print(ninos.shape)
     nParams = sum([p.nelement() for p in model.parameters() if p.requires_grad])
     print('number of parameters: %d' % nParams)
-
-    # print(output.shape, h.shape, c.shape)

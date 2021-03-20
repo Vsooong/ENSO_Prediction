@@ -37,20 +37,16 @@ def get_memory_usage(device):
 
 
 # NINO3.4区（170°W-120°W，5°S-5°N）
-def nino_index(ssta_1year):
-    year, months = ssta_1year.size()[:2]
-    nino_years = []
-    for j in range(year):
-        nino = []
-        for i in range(months - 2):
-            ssta1 = torch.mean(ssta_1year[0, i, 10:13, 38:49])
-            ssta2 = torch.mean(ssta_1year[0, i + 1, 10:13, 38:49])
-            ssta3 = torch.mean(ssta_1year[0, i + 2, 10:13, 38:49])
-            nino3_4 = (ssta1 + ssta2 + ssta3) / 3
-            nino.append(nino3_4)
-        nino_years.append(nino)
-
-    return torch.as_tensor(nino_years)
+def nino_index(ssta_year):
+    year, months = ssta_year.size()[:2]
+    ssta1 = ssta_year[:, 0:months - 2, 10:13, 38:49]
+    ssta2 = ssta_year[:, 1:months - 1, 10:13, 38:49]
+    ssta3 = ssta_year[:, 2:months, 10:13, 38:49]
+    ssta1 = torch.mean(ssta1, dim=[2, 3])
+    ssta2 = torch.mean(ssta2, dim=[2, 3])
+    ssta3 = torch.mean(ssta3, dim=[2, 3])
+    nino = (ssta1 + ssta2 + ssta3) / 3
+    return nino
 
 
 def norm(adj):
@@ -96,5 +92,12 @@ def make_layers(block):
 
 
 if __name__ == '__main__':
-    a = torch.randn(size=(4, 26, 24, 72))
-    print(nino_index(a).shape)
+    from configs import args
+    import xarray as xr
+
+    data = xr.open_dataset(args['sota_data'])['sst']
+    label = xr.open_dataset(args['sota_label'])['nino']
+    print(label[52].values)
+    data = data[52:53, ...].values
+    data = torch.as_tensor(data)
+    nino_index(data)
