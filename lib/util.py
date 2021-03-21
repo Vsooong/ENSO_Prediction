@@ -49,6 +49,143 @@ def nino_index(ssta_year):
     return nino
 
 
+def nino_index_flat(ssta_year):
+    mask = torch.Tensor([False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, True, True, True, True, True,
+                         True, True, True, True, True, True, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, True, True, True,
+                         True, True, True, True, True, True, True, True, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, True, True, True, True, True, True, True, True,
+                         True, True, True, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False, False, False, False, False, False, False,
+                         False, False, False, False]).bool()
+    btch, months = ssta_year.size()[:2]
+    ssta1 = ssta_year[:, 0:months - 2, mask]
+    ssta2 = ssta_year[:, 1:months - 1, mask]
+    ssta3 = ssta_year[:, 2:months, mask]
+    ssta1 = torch.mean(ssta1, dim=2)
+    ssta2 = torch.mean(ssta2, dim=2)
+    ssta3 = torch.mean(ssta3, dim=2)
+    nino = (ssta1 + ssta2 + ssta3) / 3
+    return nino
+
+
 def norm(adj):
     # adj += np.eye(adj.shape[0]) # 为每个结点增加自环
     degree = np.array(adj.sum(1))  # 为每个结点计算度
@@ -94,10 +231,34 @@ def make_layers(block):
 if __name__ == '__main__':
     from configs import args
     import xarray as xr
-
-    data = xr.open_dataset(args['sota_data'])['sst']
-    label = xr.open_dataset(args['sota_label'])['nino']
-    print(label[52].values)
-    data = data[52:53, ...].values
-    data = torch.as_tensor(data)
-    nino_index(data)
+    # from global_land_mask import globe
+    #
+    #
+    # def get_lon_lat():
+    #     x = np.arange(-180, 180, 5)
+    #     y = np.arange(-55, 65, 5)
+    #     lon_grid, lat_grid = np.meshgrid(x, y)
+    #     return lon_grid, lat_grid
+    #
+    #
+    # def land_mask():
+    #     x = np.arange(-180, 180, 5)
+    #     lon_grid, lat_grid = get_lon_lat()
+    #     is_on_land = globe.is_land(lat_grid, lon_grid)
+    #     is_on_land = np.concatenate([is_on_land[:, x >= 0], is_on_land[:, x < 0]], axis=1)
+    #     # plt.imshow(is_on_land[::-1, :])
+    #     # plt.show()
+    #     return is_on_land
+    #
+    #
+    # mask = land_mask()
+    # data = xr.open_dataset(args['sota_data'])['sst'].values[0, ...]
+    # label = xr.open_dataset(args['sota_label'])['nino']
+    # print(label[0].values)
+    # # print(data.shape)
+    # data[:, mask] = np.nan
+    # data = torch.flatten(torch.as_tensor(data, dtype=torch.float))
+    # data = data[~torch.isnan(data)]
+    # data = torch.reshape(data, shape=(36, -1)).unsqueeze(0)
+    # print(data.shape)
+    # print(nino_index_flat(data))

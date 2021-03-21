@@ -1,5 +1,9 @@
 import torch
+import numpy as np
 import torch.nn as nn
+from lib.util import print_model_parameters
+
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 
 class GraphConvolution(nn.Module):
@@ -18,44 +22,61 @@ class GraphConvolution(nn.Module):
 
 
 class graphCNN(nn.Module):
-    def __init__(self, n_cnn_layer: int = 1, kernals: list = [3], n_lstm_units: int = 64):
+    def __init__(self):
         super(graphCNN, self).__init__()
-        self.planes = 12
-        self.conv1 = self.make_cnn_block()
-        self.conv2 = self.make_cnn_block()
-        self.conv3 = self.make_cnn_block()
-        self.conv4 = self.make_cnn_block()
-        self.graph1 = GraphConvolution(5184, 1024)
-        self.graph2 = GraphConvolution(1024, 256)
+        self.sst_conv = [self.make_conv_block()] * 12
+        self.t300_conv = [self.make_conv_block()] * 12
+        self.ua_conv = [self.make_conv_block()] * 12
+        self.va_conv = [self.make_conv_block()] * 12
+        self.gcn1 = [GraphConvolution(1280, 256).to(device)] * 12
+        self.gcn2 = [GraphConvolution(256, 64).to(device)] * 12
+        self.lstm1 = nn.LSTM(256, 64, 2, bidirectional=True)
         self.pool3 = nn.AdaptiveAvgPool2d((1, 128))
-        self.batch_norm = nn.BatchNorm1d(12, affine=False)
-        self.lstm = nn.LSTM(256, n_lstm_units, 2, bidirectional=True)
         self.linear = nn.Linear(128, 24)
 
-    def make_cnn_block(self):
-        return nn.ModuleList(
-            [nn.Conv2d(12, self.planes, kernel_size=4, stride=2, padding=1),
-             nn.BatchNorm2d(self.planes),
-             nn.ReLU(inplace=True),
-             ])
+    def make_conv_block(self):
+        return nn.ModuleList([nn.Conv2d(1, 8, kernel_size=1),
+                              nn.BatchNorm2d(8),
+                              nn.Conv2d(8, 32, kernel_size=3),
+                              nn.BatchNorm2d(32),
+                              nn.MaxPool2d(kernel_size=3, stride=3),
+                              nn.Conv2d(32, 64, kernel_size=3),
+                              nn.BatchNorm2d(64),
+                              nn.MaxPool2d(kernel_size=2, stride=2),
+                              nn.ReLU(inplace=True)]).to(device)
 
     def forward(self, sst, t300, ua, va, adj):
-        for conv1 in self.conv1:
-            sst = conv1(sst)  # batch * 12 * (24 - 2) * (72 -2)
-        for conv2 in self.conv2:
-            t300 = conv2(t300)
-        for conv3 in self.conv3:
-            ua = conv3(ua)
-        for conv4 in self.conv4:
-            va = conv4(va)
-        sst = torch.reshape(sst, (sst.shape[0], 1, -1))  # batch * 12 * 1540
-        t300 = torch.reshape(sst, (t300.shape[0], 1, -1))
-        ua = torch.reshape(sst, (ua.shape[0], 1, -1))
-        va = torch.reshape(sst, (va.shape[0], 1, -1))  # if flat, lstm input_dims = 1540 * 4
-        x = torch.cat([sst, t300, ua, va], dim=-2)
-        x = self.graph1(adj, x)
-        x = self.graph2(adj, x)
-        x, _ = self.lstm(x)
-        x = self.pool3(x).squeeze(dim=-2)
-        x = self.linear(x)
-        return x
+        out = None
+        for i in range(12):
+            x_sst = sst[:, i, :, :]
+            x_sst = torch.reshape(x_sst, (x_sst.shape[0], 1, x_sst.shape[1], x_sst.shape[2]))
+            x_t300 = t300[:, i, :, :]
+            x_t300 = torch.reshape(x_t300, (x_t300.shape[0], 1, x_t300.shape[1], x_t300.shape[2]))
+            x_ua = ua[:, i, :, :]
+            x_ua = torch.reshape(x_ua, (x_ua.shape[0], 1, x_ua.shape[1], x_ua.shape[2]))
+            x_va = va[:, i, :, :]
+            x_va = torch.reshape(x_va, (x_va.shape[0], 1, x_va.shape[1], x_va.shape[2]))
+            for conv in self.sst_conv[i]:
+                x_sst = conv(x_sst)
+            for conv in self.t300_conv[i]:
+                x_t300 = conv(x_t300)
+            for conv in self.ua_conv[i]:
+                x_ua = conv(x_ua)
+            for conv in self.va_conv[i]:
+                x_va = conv(x_va)
+            x_sst = torch.reshape(x_sst, (sst.shape[0], 1, -1))
+            x_t300 = torch.reshape(x_t300, (sst.shape[0], 1, -1))
+            x_ua = torch.reshape(x_ua, (sst.shape[0], 1, -1))
+            x_va = torch.reshape(x_va, (sst.shape[0], 1, -1))
+            x = torch.cat([x_sst, x_t300, x_ua, x_va], dim=-2)
+            x = self.gcn1[i](adj, x)
+            x = self.gcn2[i](adj, x)
+            if out is None:
+                out = torch.reshape(x, (x.shape[0], 1, x.shape[1], x.shape[2]))
+            else:
+                out = torch.cat([out, torch.reshape(x, (x.shape[0], 1, x.shape[1], x.shape[2]))], dim=1)
+        out = torch.reshape(out, (out.shape[0], out.shape[1], -1))
+        out, _ = self.lstm1(out)
+        out = self.pool3(out).squeeze(dim=-2)
+        out = self.linear(out)
+        return out

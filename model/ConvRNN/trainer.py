@@ -1,6 +1,6 @@
 from lib.util import init_seed, print_model_parameters
-from data_loader import load_temporal_data
-from torch.utils.data import DataLoader
+from data_loader import load_data, load_train_data, load_val_data
+from torch.utils.data import DataLoader, Subset
 import torch
 from copy import deepcopy
 from lib.metric import eval_score
@@ -14,9 +14,12 @@ save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '
 
 
 def train():
-    init_seed(1995)
-    train_dataset, valid_dataset = load_temporal_data('soda')
-    train_loader = DataLoader(train_dataset, batch_size=args['batch_size'])
+    init_seed(11)
+    indices = torch.randperm(1800)[:600]
+
+    train_datasets = [Subset(load_train_data('cmip', which_num=num), indices) for num in range(15)]
+    valid_dataset = load_val_data('soda', split_num=0)
+    train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
     valid_loader = DataLoader(valid_dataset, batch_size=args['batch_size'])
     device = args['device']
     model = args['model_list'][args['model_name']]()
@@ -39,26 +42,28 @@ def train():
         loss_epoch = 0
         loss1_sum = 0
         loss2_sum = 0
-        for step, (sst, t300, ua, va, label, sst_label) in enumerate(train_loader):
-            sst = sst.to(device).float()
-            t300 = t300.to(device).float()
-            ua = ua.to(device).float()
-            va = va.to(device).float()
-            sst_label = sst_label.to(device).float()
-            optimizer.zero_grad()
-            label = label.to(device).float()
-            output, preds = model(sst, t300, ua, va)
-            loss1 = loss_fn(preds, label)
-            loss2 = loss_fn(output, sst_label)
-            loss = loss1 + loss2
-            loss.backward()
-            loss_epoch += loss.item()
-            loss1_sum += loss1.item()
-            loss2_sum += loss2.item()
-            if args['grad_norm']:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), args['max_grad_norm'])
+        for train_loader in train_loaders:
+            for step, (sst, t300, ua, va, label, sst_label) in enumerate(train_loader):
+                sst = sst.to(device).float()
+                t300 = t300.to(device).float()
+                ua = ua.to(device).float()
+                va = va.to(device).float()
+                sst_label = sst_label.to(device).float()
+                optimizer.zero_grad()
+                label = label.to(device).float()
+                output, preds = model(sst, t300, ua, va)
+                loss1 = loss_fn(preds, label)
+                loss2 = loss_fn(output, sst_label)
+                loss = loss1 + loss2
+                loss.backward()
+                loss_epoch += loss.item()
+                loss1_sum += loss1.item()
+                loss2_sum += loss2.item()
+                if args['grad_norm']:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), args['max_grad_norm'])
 
-            optimizer.step()
+                optimizer.step()
+            print('loss numerical model', loss_epoch)
         print(loss1_sum, loss2_sum)
         model.eval()
         y_true, y_pred = [], []

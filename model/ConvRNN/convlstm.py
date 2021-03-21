@@ -3,6 +3,8 @@ import torch
 from lib.util import make_layers, nino_index
 from collections import OrderedDict
 
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
 
 class CLSTM_cell(nn.Module):
     """ConvLSTMCell
@@ -27,16 +29,16 @@ class CLSTM_cell(nn.Module):
         #  seq_len=10 for moving_mnist
         if hidden_state is None:
             hx = torch.zeros(inputs.size(1), self.num_features, self.shape[0],
-                             self.shape[1]).cuda()
+                             self.shape[1]).to(device)
             cx = torch.zeros(inputs.size(1), self.num_features, self.shape[0],
-                             self.shape[1]).cuda()
+                             self.shape[1]).to(device)
         else:
             hx, cx = hidden_state
         output_inner = []
         for index in range(seq_len):
             if inputs is None:
                 x = torch.zeros(hx.size(0), self.input_channels, self.shape[0],
-                                self.shape[1]).cuda()
+                                self.shape[1]).to(device)
             else:
                 x = inputs[index, ...]
 
@@ -159,12 +161,18 @@ class convLSTM(nn.Module):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
+        self.nino_linear = nn.Linear(10, 24)
 
     def forward(self, sst, t300, ua, va):
         inputs = torch.stack([sst, t300, ua, va], dim=2)
         state = self.encoder(inputs)
         output = self.decoder(state)
-        nino_indexes = nino_index(output.squeeze(2), )
+        nino_indexes = nino_index(output.squeeze(2))
+        # new_sst = torch.cat([sst, output.squeeze(2)[:, 0:2, ...]], dim=1)
+        sim_nino_index = nino_index(sst)
+        sim_nino_index = self.nino_linear(sim_nino_index)
+        nino_indexes = (sim_nino_index + nino_indexes) / 2
+        print(output.shape)
         return output[:, :24].squeeze(2), nino_indexes
 
 
@@ -178,6 +186,6 @@ if __name__ == '__main__':
     output, ninos = model(input1, input2, input3, input4)
 
     print(output.shape)
-    print(ninos.shape)
-    nParams = sum([p.nelement() for p in model.parameters() if p.requires_grad])
-    print('number of parameters: %d' % nParams)
+#     print(ninos.shape)
+#     nParams = sum([p.nelement() for p in model.parameters() if p.requires_grad])
+#     print('number of parameters: %d' % nParams)

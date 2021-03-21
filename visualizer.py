@@ -10,16 +10,16 @@ import xarray as xr
 
 def visualize():
     # data = netCDF4.Dataset(args['sota_data'])
-    label = netCDF4.Dataset(args['cmip_label'])
-    label = np.array(label.variables['nino'][4544:4645])
-
-    # 指数趋势
-    label_all = [label[0]] + [label[i, 24:] for i in range(1, label.shape[0])]
-    label_all = np.concatenate(label_all, axis=0)
-    plt.plot(label_all, 'k', linewidth=1)
-    plt.xlabel('Time / month')
-    plt.ylabel('Nino')
-    plt.show()
+    # label = netCDF4.Dataset(args['cmip_label'])
+    # label = np.array(label.variables['nino'][4544:4645])
+    #
+    # # 指数趋势
+    # label_all = [label[0]] + [label[i, 24:] for i in range(1, label.shape[0])]
+    # label_all = np.concatenate(label_all, axis=0)
+    # plt.plot(label_all, 'k', linewidth=1)
+    # plt.xlabel('Time / month')
+    # plt.ylabel('Nino')
+    # plt.show()
 
     # 海陆掩膜
     # lon = np.array(data.variables['lon'])
@@ -66,6 +66,8 @@ def visualize():
     # plt.quiver(lon, lat + 65, ua[::-1, :], va[::-1, :], alpha=0.8)
     # plt.show()
 
+    pass
+
 
 # 缺失值分析
 def nan_analysis():
@@ -73,4 +75,9 @@ def nan_analysis():
 
 
 if __name__ == '__main__':
-    visualize()
+    # visualize()
+    # data = xr.open_dataset(args['cmip_data'])
+    # sst = data['sst'][145, 6]
+    # print(sst)
+    # plt.imshow(sst)
+    pass
