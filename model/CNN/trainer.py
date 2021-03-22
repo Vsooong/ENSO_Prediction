@@ -32,7 +32,7 @@ def train():
 
     device = args['device']
     model = args['model_list'][args['model_name']]()
-    if args['pretrain']:
+    if args['pretrain'] and os.path.exists(save_dir):
         model.load_state_dict(torch.load(save_dir, map_location=device))
         print('load model from:', save_dir)
 

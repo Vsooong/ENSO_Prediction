@@ -1,5 +1,5 @@
 from lib.util import init_seed, print_model_parameters
-from data_loader import load_data, load_train_data, load_val_data
+from data_loader import load_train_data, load_val_data
 from torch.utils.data import DataLoader, Subset
 import torch
 from copy import deepcopy
@@ -7,6 +7,7 @@ from lib.metric import eval_score
 import os
 import torch.nn as nn
 from configs import args
+import numpy as np
 
 args['model_name'] = 'convLSTM'
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -15,15 +16,17 @@ save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '
 
 def train():
     init_seed(11)
-    indices = torch.randperm(1800)[:600]
-
-    train_datasets = [Subset(load_train_data('cmip', which_num=num), indices) for num in range(15)]
-    valid_dataset = load_val_data('soda', split_num=0)
+    indices = torch.randperm(1700)[:150]
+    train_numerical = np.array([1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 15]) - 1
+    val_numerical = np.array([3, 6, 9, 12]) - 1
+    train_datasets = [Subset(load_train_data('cmip', which_num=num), indices) for num in train_numerical]
+    valid_datasets = [Subset(load_val_data('cmip', which_num=num), indices) for num in val_numerical]
     train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
-    valid_loader = DataLoader(valid_dataset, batch_size=args['batch_size'])
+    valid_loaders = [DataLoader(valid_dataset, batch_size=args['batch_size']) for valid_dataset in valid_datasets]
+
     device = args['device']
     model = args['model_list'][args['model_name']]()
-    if args['pretrain']:
+    if args['pretrain'] and os.path.exists(save_dir):
         model.load_state_dict(torch.load(save_dir, map_location=device))
         print('load model from:', save_dir)
 
@@ -40,42 +43,42 @@ def train():
     for i in range(args['n_epochs']):
         model.train()
         loss_epoch = 0
-        loss1_sum = 0
-        loss2_sum = 0
         for train_loader in train_loaders:
             for step, (sst, t300, ua, va, label, sst_label) in enumerate(train_loader):
                 sst = sst.to(device).float()
                 t300 = t300.to(device).float()
                 ua = ua.to(device).float()
                 va = va.to(device).float()
-                sst_label = sst_label.to(device).float()
+                # sst_label = sst_label.to(device).float()
                 optimizer.zero_grad()
                 label = label.to(device).float()
-                output, preds = model(sst, t300, ua, va)
+                # output, preds = model(sst, t300, ua, va)
+                preds = model(sst, t300, ua, va)
                 loss1 = loss_fn(preds, label)
-                loss2 = loss_fn(output, sst_label)
-                loss = loss1 + loss2
-                loss.backward()
-                loss_epoch += loss.item()
-                loss1_sum += loss1.item()
-                loss2_sum += loss2.item()
+                # loss2 = loss_fn(output, sst_label)
+                # loss = loss1 + loss2
+                loss1.backward()
+                loss_epoch += loss1.item()
                 if args['grad_norm']:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args['max_grad_norm'])
 
                 optimizer.step()
+                del preds, loss1
             print('loss numerical model', loss_epoch)
-        print(loss1_sum, loss2_sum)
+
         model.eval()
         y_true, y_pred = [], []
-        for step, (sst, t300, ua, va, label, sst_label) in enumerate(valid_loader):
-            sst = sst.to(device).float()
-            t300 = t300.to(device).float()
-            ua = ua.to(device).float()
-            va = va.to(device).float()
-            label = label.float()
-            output, preds = model(sst, t300, ua, va)
-            y_pred.append(preds.detach())
-            y_true.append(label.detach())
+        for valid_loader in valid_loaders:
+            for step, (sst, t300, ua, va, label, sst_label) in enumerate(valid_loader):
+                sst = sst.to(device).float()
+                t300 = t300.to(device).float()
+                ua = ua.to(device).float()
+                va = va.to(device).float()
+                label = label.to(device).float()
+                preds = model(sst, t300, ua, va)
+                y_pred.append(preds.detach())
+                y_true.append(label.detach())
+                del preds
 
         y_true = torch.cat(y_true, axis=0)
         y_pred = torch.cat(y_pred, axis=0)
