@@ -6,7 +6,7 @@ import numpy as np
 import zipfile
 from data_loader import land_mask, get_flat_lon_lat
 
-args['model_name'] = 'AGCRN'
+args['model_name'] = 'simpleSpatailTimeNN'
 
 
 def mask_flat_tensor(sst, t300, ua, va):

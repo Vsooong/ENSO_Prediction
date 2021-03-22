@@ -1,6 +1,6 @@
 from lib.util import init_seed, print_model_parameters, norm
-from data_loader import load_data, load_train_data, load_val_data
-from torch.utils.data import DataLoader
+from data_loader import load_train_data, load_val_data
+from torch.utils.data import DataLoader, Subset
 import torch
 from copy import deepcopy
 from lib.metric import eval_score
@@ -16,10 +16,19 @@ save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '
 
 def train():
     init_seed(11)
-    train_datasets = [load_train_data('cmip', which_num=num) for num in range(15)]
-    valid_dataset = load_val_data('soda')
+    # train_datasets = [load_train_data('cmip', which_num=num) for num in range(15)]
+    # valid_dataset = load_val_data('soda')
+    # train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
+    # valid_loader = DataLoader(valid_dataset, batch_size=args['batch_size'])
+
+    indices = torch.randperm(1700)[:15]
+    train_numerical = np.array([1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 15]) - 1
+    val_numerical = np.array([3, 6, 9, 12]) - 1
+    train_datasets = [Subset(load_train_data('cmip', which_num=num), indices) for num in train_numerical]
+    valid_datasets = [Subset(load_val_data('cmip', which_num=num), indices) for num in val_numerical]
     train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
-    valid_loader = DataLoader(valid_dataset, batch_size=args['batch_size'])
+    valid_loaders = [DataLoader(valid_dataset, batch_size=args['batch_size']) for valid_dataset in valid_datasets]
+
     device = args['device']
     model = args['model_list'][args['model_name']]()
     if args['pretrain']:
@@ -48,7 +57,6 @@ def train():
                 optimizer.zero_grad()
                 label = label.to(device).float()
                 preds = model(sst, t300, ua, va)
-                # preds = model(sst, t300, ua, va, adj)
                 loss = loss_fn(preds, label)
                 loss.backward()
                 loss_epoch += loss.item()
@@ -56,20 +64,21 @@ def train():
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args['max_grad_norm'])
 
                 optimizer.step()
+                del preds, loss
 
         model.eval()
         y_true, y_pred = [], []
-        for step, (sst, t300, ua, va, label, sst_label) in enumerate(valid_loader):
-            sst = sst.to(device).float()
-            t300 = t300.to(device).float()
-            ua = ua.to(device).float()
-            va = va.to(device).float()
-            label = label.to(device).float()
-            preds = model(sst, t300, ua, va)
-            # preds = model(sst, t300, ua, va, adj)
-
-            y_pred.append(preds)
-            y_true.append(label)
+        for valid_loader in valid_loaders:
+            for step, (sst, t300, ua, va, label, sst_label) in enumerate(valid_loader):
+                sst = sst.to(device).float()
+                t300 = t300.to(device).float()
+                ua = ua.to(device).float()
+                va = va.to(device).float()
+                label = label.to(device).float()
+                preds = model(sst, t300, ua, va)
+                y_pred.append(preds.detach())
+                y_true.append(label.detach())
+                del preds
 
         y_true = torch.cat(y_true, axis=0)
         y_pred = torch.cat(y_pred, axis=0)
