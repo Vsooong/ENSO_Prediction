@@ -16,7 +16,7 @@ save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '
 
 def train():
     init_seed(1995)
-    indices = torch.randperm(1800)[:900]
+    indices = torch.randperm(1700)[:900]
     train_numerical = np.array([1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 15]) - 1
     val_numerical = np.array([3, 6, 9, 12]) - 1
     splitNum = 0
@@ -27,15 +27,14 @@ def train():
     train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
     valid_loaders = DataLoader(valid_dataset, batch_size=args['batch_size'])
     device = args['device']
+
     model = args['model_list'][args['model_name']]()
     if args['pretrain'] and os.path.exists(save_dir):
         model.load_state_dict(torch.load(save_dir, map_location=device))
-    print('load model from:', save_dir)
-
+        print('load model from:', save_dir)
+    model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args['learning_rate'])
     loss_fn = nn.MSELoss()
-
-    model.to(device)
     loss_fn.to(device)
     print_model_parameters(model)
 
