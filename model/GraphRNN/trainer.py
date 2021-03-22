@@ -7,6 +7,7 @@ from lib.metric import eval_score
 import os
 import torch.nn as nn
 from configs import args
+import numpy as np
 
 args['model_name'] = 'AGCRN'
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -16,8 +17,8 @@ save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '
 def train():
     init_seed(1995)
     indices = torch.randperm(1800)[:900]
-    train_numerical = [1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 15]
-    val_numerical = [3, 6, 9, 12]
+    train_numerical = np.array([1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 15]) - 1
+    val_numerical = np.array([3, 6, 9, 12]) - 1
     splitNum = 0
 
     train_datasets = [Subset(load_graph_data('cmip', which_num=num), indices) for num in train_numerical]
@@ -27,7 +28,7 @@ def train():
     valid_loaders = DataLoader(valid_dataset, batch_size=args['batch_size'])
     device = args['device']
     model = args['model_list'][args['model_name']]()
-    if args['pretrain']:
+    if args['pretrain'] and os.path.exists(save_dir):
         model.load_state_dict(torch.load(save_dir, map_location=device))
     print('load model from:', save_dir)
 
@@ -48,6 +49,7 @@ def train():
         loss2_sum = 0
         model.to('cuda')
         for cmip_num, train_loader in enumerate(train_loaders):
+            loss_numodel = 0
             for step, (sst, t300, ua, va, lon, lat, label, sst_label) in enumerate(train_loader):
                 sst = sst.to(device)
                 t300 = t300.to(device)
@@ -64,14 +66,15 @@ def train():
                 loss2 = loss_fn(output, sst_label)
                 loss = loss2 + loss1 / 5
                 loss.backward()
-                loss_epoch += loss.detach().item()
+                loss_numodel += loss.detach().item()
                 # loss1_sum += loss1.item()
                 # loss2_sum += loss2.item()
                 if args['grad_norm']:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args['max_grad_norm'])
 
                 optimizer.step()
-            print('numerical model {} loss: {}'.format(cmip_num, loss_epoch))
+            print('numerical model {} loss: {}'.format(cmip_num, loss_numodel))
+            loss_epoch += loss_numodel
 
         del loss, loss1, loss2, output, preds
         model.eval()
