@@ -15,7 +15,7 @@ args = {
     'pretrain': False,
     'n_epochs': 2000,
     'learning_rate': 8e-5,
-    'batch_size': 2,
+    'batch_size': 6,
     'device': 'cuda:0' if torch.cuda.is_available() else 'cpu',
     'grad_norm': False,
     'max_grad_norm': 5,
