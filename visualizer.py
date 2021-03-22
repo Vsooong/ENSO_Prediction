@@ -79,7 +79,7 @@ if __name__ == '__main__':
     import torch
 
     data = xr.open_dataset(args['cmip_data'])
-    sst = torch.as_tensor(data['va'][9, 2].values)
+    sst = torch.as_tensor(data['t300'][9, 2].values)
     plt.imshow(sst)
     import seaborn as sns
 

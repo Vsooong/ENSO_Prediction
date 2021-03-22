@@ -5,6 +5,7 @@ import os
 import numpy as np
 import zipfile
 from data_loader import land_mask, get_flat_lon_lat
+from lib.util import norm
 
 args['model_name'] = 'simpleSpatailTimeNN'
 
@@ -58,6 +59,9 @@ def test(in_path='./tcdata/enso_round1_test_20210201/',
         if args['model_name'] == 'AGCRN':
             sst, t300, ua, va, lon, lat = mask_flat_tensor(sst, t300, ua, va)
             preds = model(sst.to(device), t300.to(device), ua.to(device), va.to(device), lon.to(device), lat.to(device))
+        elif args['model_name'] == 'graphCNN':
+            adj = torch.tensor(norm(np.ones((4, 4))), dtype=torch.float).to(device)
+            preds = model(sst.to(device), t300.to(device), ua.to(device), va.to(device), adj)
         else:
             preds = model(sst.to(device), t300.to(device), ua.to(device), va.to(device))
         if len(preds) == 2:

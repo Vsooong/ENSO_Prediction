@@ -12,7 +12,7 @@ args = {
         'convLSTM': convLSTM,
         'AGCRN': AGCRN,
     },
-    'pretrain': False,
+    'pretrain': True,
     'n_epochs': 2000,
     'learning_rate': 8e-5,
     'batch_size': 6,

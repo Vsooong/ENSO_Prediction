@@ -1,10 +1,10 @@
 import torch
 import numpy as np
 import torch.nn as nn
+import torch.nn.functional as F
 from lib.util import print_model_parameters
 
-device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class GraphConvolution(nn.Module):
     def __init__(self, input_size, output_size):
@@ -33,6 +33,8 @@ class graphCNN(nn.Module):
         self.lstm1 = nn.LSTM(256, 64, 2, bidirectional=True)
         self.pool3 = nn.AdaptiveAvgPool2d((1, 128))
         self.linear = nn.Linear(128, 24)
+        self.lstm2 = nn.LSTM(1, 1, 2, bidirectional=True)
+        self.dense = nn.Linear(2, 1, bias=True)
 
     def make_conv_block(self):
         return nn.ModuleList([nn.Conv2d(1, 8, kernel_size=1),
@@ -79,4 +81,5 @@ class graphCNN(nn.Module):
         out, _ = self.lstm1(out)
         out = self.pool3(out).squeeze(dim=-2)
         out = self.linear(out)
+
         return out

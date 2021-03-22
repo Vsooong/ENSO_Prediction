@@ -10,6 +10,7 @@ from configs import args
 import numpy as np
 
 args['model_name'] = 'simpleSpatailTimeNN'
+args['batch_size'] = 64
 current_dir = os.path.dirname(os.path.realpath(__file__))
 save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '.pth')
 
@@ -21,7 +22,7 @@ def train():
     # train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
     # valid_loader = DataLoader(valid_dataset, batch_size=args['batch_size'])
 
-    indices = torch.randperm(1700)[:15]
+    indices = torch.randperm(1700)[:1600]
     train_numerical = np.array([1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 15]) - 1
     val_numerical = np.array([3, 6, 9, 12]) - 1
     train_datasets = [Subset(load_train_data('cmip', which_num=num), indices) for num in train_numerical]
