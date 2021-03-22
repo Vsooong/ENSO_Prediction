@@ -166,34 +166,30 @@ def load_graph_data(which_data='soda', split_num=960, which_num=0, mode='train')
     else:
         month_range = which_num
 
-    # start = time.time()
-    train_sst = train_sst[month_range]
-    train_sst[:, mask] = np.nan
-    train_sst = torch.flatten(torch.as_tensor(train_sst, dtype=torch.float))
-    train_sst = train_sst[~torch.isnan(train_sst)]
-    train_sst = torch.reshape(train_sst, shape=(months, -1))
+    def mask_tensor(input, month):
+        input[:, mask] = np.nan
+        input = torch.flatten(input)
+        input = input[~torch.isnan(input)]
+        input = torch.reshape(input, shape=(month, -1))
+        return input
+
+    train_sst = torch.as_tensor(train_sst[month_range], dtype=torch.float)
+    train_sst = mask_tensor(train_sst, months)
 
     train_t300 = np.nan_to_num(np.load(t300)['t300'][month_range])
-    train_t300[:, mask] = np.nan
-    train_t300 = torch.flatten(torch.as_tensor(train_t300, dtype=torch.float))
-    train_t300 = train_t300[~torch.isnan(train_t300)]
-    train_t300 = torch.reshape(train_t300, shape=(months, -1))
+    train_t300 = torch.as_tensor(train_t300, dtype=torch.float)
+    train_t300 = mask_tensor(train_t300, months)
 
     train_ua = np.nan_to_num(np.load(ua)['ua'][month_range])
-    train_ua[:, mask] = np.nan
-    train_ua = torch.flatten(torch.as_tensor(train_ua, dtype=torch.float))
-    train_ua = train_ua[~torch.isnan(train_ua)]
-    train_ua = torch.reshape(train_ua, shape=(months, -1))
+    train_ua = torch.as_tensor(train_ua, dtype=torch.float)
+    train_ua = mask_tensor(train_ua, months)
 
     train_va = np.nan_to_num(np.load(va)['va'][month_range])
-    train_va[:, mask] = np.nan
-    train_va = torch.flatten(torch.as_tensor(train_va, dtype=torch.float))
-    train_va = train_va[~torch.isnan(train_va)]
-    train_va = torch.reshape(train_va, shape=(months, -1))
+    train_va = torch.as_tensor(train_va, dtype=torch.float)
+    train_va = mask_tensor(train_va, months)
 
     train_label = torch.as_tensor(np.nan_to_num(np.load(label)['nino']), dtype=torch.float)
     train_label = train_label.squeeze(0)[month_range]
-    # print(time.time() - start)
 
     # torch.set_printoptions(threshold=10_000)
     # nino_area = (10 <= lon_grid[0]) & (60 >= lon_grid[0]) & (-5 <= lat_grid[0]) & (5 >= lat_grid[0])

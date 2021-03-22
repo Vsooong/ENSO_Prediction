@@ -103,8 +103,8 @@ class AVWDCRNN(nn.Module):
 
 
 class AGCRN(nn.Module):
-    def __init__(self, num_nodes=1244, input_dim=6, embed_dim=12,
-                 default_graph=True, rnn_units=32, num_layers=2, cheb_k=2,
+    def __init__(self, num_nodes=1244, input_dim=6, embed_dim=24,
+                 default_graph=True, rnn_units=48, num_layers=2, cheb_k=2,
                  output_dim=1, horizon=26):
         super(AGCRN, self, ).__init__()
         self.num_node = num_nodes
@@ -144,7 +144,7 @@ class AGCRN(nn.Module):
 if __name__ == '__main__':
     devcie = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     model = AGCRN().to(devcie)
-    bch = 8
+    bch = 4
     input1 = torch.rand(bch, 12, 1244).to(devcie)
     input2 = torch.rand(bch, 12, 1244).to(devcie)
     input3 = torch.rand(bch, 12, 1244).to(devcie)

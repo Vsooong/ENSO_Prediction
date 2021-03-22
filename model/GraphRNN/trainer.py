@@ -15,19 +15,21 @@ save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '
 
 def train():
     init_seed(1995)
-    indices = torch.randperm(1800)[:600]
-    num_numerical = 15
+    indices = torch.randperm(1800)[:900]
+    train_numerical = [1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 15]
+    val_numerical = [3, 6, 9, 12]
     splitNum = 0
 
-    train_datasets = [Subset(load_graph_data('cmip', which_num=num), indices) for num in range(num_numerical)]
-    valid_dataset = load_graph_data('soda', split_num=splitNum, mode='val')
+    train_datasets = [Subset(load_graph_data('cmip', which_num=num), indices) for num in train_numerical]
+    # valid_dataset = load_graph_data('soda', split_num=splitNum, mode='val')
+    valid_dataset = [Subset(load_graph_data('cmip', which_num=num), indices) for num in val_numerical]
     train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
-    valid_loader = DataLoader(valid_dataset, batch_size=args['batch_size'])
+    valid_loaders = DataLoader(valid_dataset, batch_size=args['batch_size'])
     device = args['device']
     model = args['model_list'][args['model_name']]()
     if args['pretrain']:
         model.load_state_dict(torch.load(save_dir, map_location=device))
-        print('load model from:', save_dir)
+    print('load model from:', save_dir)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args['learning_rate'])
     loss_fn = nn.MSELoss()
@@ -60,7 +62,7 @@ def train():
                 output, preds = model(sst, t300, ua, va, lon, lat)
                 loss1 = loss_fn(preds, label)
                 loss2 = loss_fn(output, sst_label)
-                loss = loss2 + loss1
+                loss = loss2 + loss1 / 5
                 loss.backward()
                 loss_epoch += loss.detach().item()
                 # loss1_sum += loss1.item()
@@ -74,18 +76,19 @@ def train():
         del loss, loss1, loss2, output, preds
         model.eval()
         y_true, y_pred = [], []
-        for step, (sst, t300, ua, va, lon, lat, label, sst_label) in enumerate(valid_loader):
-            sst = sst.to(device)
-            t300 = t300.to(device)
-            ua = ua.to(device)
-            va = va.to(device)
-            lon = lon.to(device)
-            lat = lat.to(device)
-            label = label.to(device)
-            output, preds = model(sst, t300, ua, va, lon, lat)
-            y_pred.append(preds.detach())
-            y_true.append(label.detach())
-            del output, preds
+        for cmip_num, valid_loader in enumerate(valid_loaders):
+            for step, (sst, t300, ua, va, lon, lat, label, sst_label) in enumerate(valid_loader):
+                sst = sst.to(device)
+                t300 = t300.to(device)
+                ua = ua.to(device)
+                va = va.to(device)
+                lon = lon.to(device)
+                lat = lat.to(device)
+                label = label.to(device)
+                output, preds = model(sst, t300, ua, va, lon, lat)
+                y_pred.append(preds.detach())
+                y_true.append(label.detach())
+                del output, preds
 
         y_true = torch.cat(y_true, axis=0)
         y_pred = torch.cat(y_pred, axis=0)
