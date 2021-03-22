@@ -23,9 +23,9 @@ def train():
 
     train_datasets = [Subset(load_graph_data('cmip', which_num=num), indices) for num in train_numerical]
     # valid_dataset = load_graph_data('soda', split_num=splitNum, mode='val')
-    valid_dataset = [Subset(load_graph_data('cmip', which_num=num), indices) for num in val_numerical]
+    valid_datasets = [Subset(load_graph_data('cmip', which_num=num), indices) for num in val_numerical]
     train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
-    valid_loaders = DataLoader(valid_dataset, batch_size=args['batch_size'])
+    valid_loaders = [DataLoader(valid_dataset, batch_size=args['batch_size']) for valid_dataset in valid_datasets]
     device = args['device']
 
     model = args['model_list'][args['model_name']]()
@@ -72,10 +72,11 @@ def train():
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args['max_grad_norm'])
 
                 optimizer.step()
-            print('numerical model {} loss: {}'.format(cmip_num, loss_numodel))
-            loss_epoch += loss_numodel
+                del output, preds, loss, loss1, loss2
 
-        del loss, loss1, loss2, output, preds
+            loss_epoch += loss_numodel
+            print('numerical model {} loss: {}'.format(cmip_num, loss_numodel))
+
         model.eval()
         y_true, y_pred = [], []
         for cmip_num, valid_loader in enumerate(valid_loaders):
