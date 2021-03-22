@@ -24,11 +24,11 @@ class GridEarthDataSet(Dataset):
         self.data = data
 
     def __len__(self):
-        return len(self.data['sst']) - 36
+        return len(self.data['sst']) - 38
 
     def __getitem__(self, idx):
         return self.data['sst'][idx:idx + 12], self.data['t300'][idx:idx + 12], self.data['ua'][idx:idx + 12], \
-               self.data['va'][idx:idx + 12], self.data['label'][idx + 12:idx + 36], self.data['sst'][idx + 12:idx + 36]
+               self.data['va'][idx:idx + 12], self.data['label'][idx + 12:idx + 36], self.data['sst'][idx + 12:idx + 38]
 
 
 class GraphDataSet(Dataset):
@@ -36,12 +36,12 @@ class GraphDataSet(Dataset):
         self.data = data
 
     def __len__(self):
-        return len(self.data['sst']) - 36
+        return len(self.data['sst']) - 38
 
     def __getitem__(self, idx):
         return self.data['sst'][idx:idx + 12], self.data['t300'][idx:idx + 12], self.data['ua'][idx:idx + 12], \
                self.data['va'][idx:idx + 12], self.data['lon'][idx:idx + 12], self.data['lat'][idx:idx + 12], \
-               self.data['label'][idx + 12:idx + 36], self.data['sst'][idx + 12:idx + 36]
+               self.data['label'][idx + 12:idx + 36], self.data['sst'][idx + 12:idx + 38]
 
 
 def load_data():
@@ -195,6 +195,27 @@ def load_graph_data(which_data='soda', split_num=960, which_num=0, mode='train')
     train_label = train_label.squeeze(0)[month_range]
     # print(time.time() - start)
 
+    # torch.set_printoptions(threshold=10_000)
+    # nino_area = (10 <= lon_grid[0]) & (60 >= lon_grid[0]) & (-5 <= lat_grid[0]) & (5 >= lat_grid[0])
+    # assert torch.sum(nino_area) == 33
+    # print(nino_area)
+    lon_grid, lat_grid = get_flat_lon_lat(months)
+
+    print('Samples: {}'.format(len(train_label) - 38))
+    dict_train = {
+        'sst': train_sst / 1,
+        't300': train_t300 / 1,
+        'ua': train_ua / 5,
+        'va': train_va / 5,
+        'lon': lon_grid / 180,
+        'lat': lat_grid / 60,
+        'label': train_label}
+    train_dataset = GraphDataSet(dict_train)
+    return train_dataset
+
+
+def get_flat_lon_lat(months):
+    mask = land_mask()
     lon_grid, lat_grid = get_lon_lat()
     lon_grid = torch.tensor(lon_grid, dtype=torch.float)
     lon_grid = lon_grid.repeat(months, 1, 1)
@@ -210,26 +231,7 @@ def load_graph_data(which_data='soda', split_num=960, which_num=0, mode='train')
     lat_grid = torch.flatten(lat_grid)
     lat_grid = lat_grid[~torch.isnan(lat_grid)]
     lat_grid = torch.reshape(lat_grid, shape=(months, -1))
-    torch.set_printoptions(threshold=10_000)
-    nino_area = (10 <= lon_grid[0]) & (60 >= lon_grid[0]) & (-5 <= lat_grid[0]) & (5 >= lat_grid[0])
-    assert torch.sum(nino_area) == 33
-    print(nino_area)
-
-    # print(lat_grid.shape)
-    # print(time.time() - start)
-
-    print('Samples: {}'.format(len(train_label) - 36))
-    dict_train = {
-        'sst': train_sst,
-        't300': train_t300,
-        'ua': train_ua,
-        'va': train_va,
-        'lon': lon_grid / 300,
-        'lat': lat_grid / 100,
-        'label': train_label}
-
-    train_dataset = GraphDataSet(dict_train)
-    return train_dataset
+    return lon_grid, lat_grid
 
 
 def get_lon_lat():
@@ -250,7 +252,7 @@ def land_mask():
 
 
 if __name__ == '__main__':
-    load_graph_data('soda')
+    train_dataset = load_graph_data('soda')
     # from torch.utils.data import DataLoader
     # start_time = time.time()
     # train_dataset = load_train_data('cmip')

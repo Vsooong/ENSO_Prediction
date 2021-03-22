@@ -16,9 +16,11 @@ save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '
 def train():
     init_seed(1995)
     indices = torch.randperm(1800)[:600]
+    num_numerical = 15
+    splitNum = 0
 
-    train_datasets = [Subset(load_graph_data('cmip', which_num=num), indices) for num in range(2)]
-    valid_dataset = load_graph_data('soda', split_num=0, mode='val')
+    train_datasets = [Subset(load_graph_data('cmip', which_num=num), indices) for num in range(num_numerical)]
+    valid_dataset = load_graph_data('soda', split_num=splitNum, mode='val')
     train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
     valid_loader = DataLoader(valid_dataset, batch_size=args['batch_size'])
     device = args['device']
@@ -42,7 +44,8 @@ def train():
         loss_epoch = 0
         loss1_sum = 0
         loss2_sum = 0
-        for train_loader in train_loaders:
+        model.to('cuda')
+        for cmip_num, train_loader in enumerate(train_loaders):
             for step, (sst, t300, ua, va, lon, lat, label, sst_label) in enumerate(train_loader):
                 sst = sst.to(device)
                 t300 = t300.to(device)
@@ -54,22 +57,21 @@ def train():
                 sst_label = sst_label.to(device)
 
                 optimizer.zero_grad()
-                # output, preds = model(sst, t300, ua, va, lon, lat)
-                output = model(sst, t300, ua, va, lon, lat)
-
-                # loss1 = loss_fn(preds, label)
+                output, preds = model(sst, t300, ua, va, lon, lat)
+                loss1 = loss_fn(preds, label)
                 loss2 = loss_fn(output, sst_label)
-                loss = loss2
+                loss = loss2 + loss1
                 loss.backward()
-                loss_epoch += loss.item()
+                loss_epoch += loss.detach().item()
                 # loss1_sum += loss1.item()
                 # loss2_sum += loss2.item()
                 if args['grad_norm']:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args['max_grad_norm'])
 
                 optimizer.step()
-            print('loss numerical model', loss_epoch)
-        # print(loss1_sum, loss2_sum)
+            print('numerical model {} loss: {}'.format(cmip_num, loss_epoch))
+
+        del loss, loss1, loss2, output, preds
         model.eval()
         y_true, y_pred = [], []
         for step, (sst, t300, ua, va, lon, lat, label, sst_label) in enumerate(valid_loader):
@@ -80,11 +82,10 @@ def train():
             lon = lon.to(device)
             lat = lat.to(device)
             label = label.to(device)
-            # sst_label = sst_label.to(device)
-            output = model(sst, t300, ua, va, lon, lat)
-            # output, preds = model(sst, t300, ua, va, lon, lat)
-            # y_pred.append(preds.detach())
-            # y_true.append(label.detach())
+            output, preds = model(sst, t300, ua, va, lon, lat)
+            y_pred.append(preds.detach())
+            y_true.append(label.detach())
+            del output, preds
 
         y_true = torch.cat(y_true, axis=0)
         y_pred = torch.cat(y_pred, axis=0)

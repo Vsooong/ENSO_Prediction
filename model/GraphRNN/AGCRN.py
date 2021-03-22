@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import os, sys
+import math
 from lib.util import nino_index_flat
+
+torch.set_printoptions(threshold=10_000)
 
 
 class AVWGCN(nn.Module):
@@ -11,6 +13,12 @@ class AVWGCN(nn.Module):
         self.cheb_k = cheb_k
         self.weights_pool = nn.Parameter(torch.FloatTensor(embed_dim, cheb_k, dim_in, dim_out))
         self.bias_pool = nn.Parameter(torch.FloatTensor(embed_dim, dim_out))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        stdv = 1. / math.sqrt(self.weights_pool.size(-1))
+        self.weights_pool.data.uniform_(-stdv, stdv)
+        self.bias_pool.data.uniform_(-stdv, stdv)
 
     def forward(self, x, node_embeddings):
         # x shaped[B, N, C], node_embeddings shaped [N, D] -> supports shaped [N, N]
@@ -23,6 +31,7 @@ class AVWGCN(nn.Module):
             support_set.append(torch.matmul(2 * supports, support_set[-1]) - support_set[-2])
         supports = torch.stack(support_set, dim=0)
         weights = torch.einsum('nd,dkio->nkio', node_embeddings, self.weights_pool)  # N, cheb_k, dim_in, dim_out
+        # print(weights[0])
         bias = torch.matmul(node_embeddings, self.bias_pool)  # N, dim_out
         x_g = torch.einsum("knm,bmc->bknc", supports, x)  # B, cheb_k, N, dim_in
         x_g = x_g.permute(0, 2, 1, 3)  # B, N, cheb_k, dim_in
@@ -94,7 +103,7 @@ class AVWDCRNN(nn.Module):
 
 
 class AGCRN(nn.Module):
-    def __init__(self, num_nodes=1244, input_dim=6, embed_dim=32,
+    def __init__(self, num_nodes=1244, input_dim=6, embed_dim=12,
                  default_graph=True, rnn_units=32, num_layers=2, cheb_k=2,
                  output_dim=1, horizon=26):
         super(AGCRN, self, ).__init__()
@@ -121,6 +130,7 @@ class AGCRN(nn.Module):
 
         init_state = self.encoder.init_hidden(source.shape[0])
         output, _ = self.encoder(source, init_state, self.node_embeddings)  # B, T, N, hidden
+        # print(self.node_embeddings)
         output = output[:, -1:, :, :]  # B, 1, N, hidden
 
         # CNN based predictor
@@ -128,21 +138,23 @@ class AGCRN(nn.Module):
         output = output.squeeze(-1).reshape(-1, self.horizon, self.output_dim, self.num_node)
         output = output.permute(0, 1, 3, 2).squeeze(3)  # B, T, N
         nino_indexes = nino_index_flat(output)
-        return output[:, :24, :], nino_indexes
+        return output, nino_indexes
 
 
 if __name__ == '__main__':
     devcie = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     model = AGCRN().to(devcie)
-    bch = 4
+    bch = 8
     input1 = torch.rand(bch, 12, 1244).to(devcie)
     input2 = torch.rand(bch, 12, 1244).to(devcie)
     input3 = torch.rand(bch, 12, 1244).to(devcie)
     input4 = torch.rand(bch, 12, 1244).to(devcie)
     input5 = torch.rand(bch, 12, 1244).to(devcie)
     input6 = torch.rand(bch, 12, 1244).to(devcie)
+    # model.train()
     output, preds = model(input1, input2, input3, input4, input5, input6)
-    print(preds.shape)
-    print(output.shape)
+    del output, preds
+    output, preds = model(input1, input2, input3, input4, input5, input6)
+
     nParams = sum([p.nelement() for p in model.parameters() if p.requires_grad])
     print('number of parameters: %d' % nParams)
