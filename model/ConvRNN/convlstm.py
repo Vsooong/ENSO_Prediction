@@ -63,13 +63,13 @@ class CLSTM_cell(nn.Module):
 
 convlstm_encoder_params = [
     [
-        OrderedDict({'conv1_leaky_1': [5, 64, 3, 2, 1]}),
+        OrderedDict({'conv1_leaky_1': [5, 64, 3, 1, 1]}),
         OrderedDict({'conv2_leaky_1': [64, 64, 3, 2, 1]}),
     ],
 
     [
+        CLSTM_cell(shape=(24, 72), input_channels=64, filter_size=3, num_features=64),
         CLSTM_cell(shape=(12, 36), input_channels=64, filter_size=3, num_features=64),
-        CLSTM_cell(shape=(6, 18), input_channels=64, filter_size=3, num_features=64),
     ]
 ]
 
@@ -122,12 +122,13 @@ class Encoder(nn.Module):
 
 
 class convLSTM(nn.Module):
-    def __init__(self, encoder=Encoder(convlstm_encoder_params[0], convlstm_encoder_params[1])):
+    def __init__(self, encoder=Encoder(convlstm_encoder_params[0], convlstm_encoder_params[1]), rnn_unit=64):
         super().__init__()
         self.encoder = encoder
         self.conv1 = nn.Conv3d(in_channels=64, out_channels=1, kernel_size=(1, 1, 1))
-        self.rnn = nn.GRU(108, 24, batch_first=True)
-        self.fc = nn.Linear(108 * 12, 24)
+        self.batch_norm = nn.BatchNorm1d(12, affine=False)
+        self.rnn = nn.GRU(432, rnn_unit, batch_first=True)
+        self.fc = nn.Linear(12 * rnn_unit, 24)
 
     def forward(self, sst, t300, ua, va):
         batch, month, h, w = sst.size()
@@ -137,12 +138,16 @@ class convLSTM(nn.Module):
         output = output.permute(1, 2, 0, 3, 4)
         output = self.conv1(output).squeeze(1)
 
+        # output = torch.flatten(output, start_dim=1)
+        # output = self.fc(output)
+
+        output = torch.flatten(output, start_dim=2)
+        output = self.batch_norm(output)
+        output, _ = self.rnn(output)
         output = torch.flatten(output, start_dim=1)
         output = self.fc(output)
+
         return output
-        # output = torch.flatten(output, start_dim=2)
-        # out, nino_index = self.rnn(output)
-        # return nino_index.squeeze(0)
 
 
 # class Decoder(nn.Module):

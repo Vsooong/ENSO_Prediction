@@ -43,7 +43,8 @@ def train():
     for i in range(args['n_epochs']):
         model.train()
         loss_epoch = 0
-        for train_loader in train_loaders:
+        for cmip_num, train_loader in enumerate(train_loaders):
+            loss_numodel = 0
             for step, (sst, t300, ua, va, label, sst_label) in enumerate(train_loader):
                 sst = sst.to(device).float()
                 t300 = t300.to(device).float()
@@ -58,13 +59,14 @@ def train():
                 # loss2 = loss_fn(output, sst_label)
                 # loss = loss1 + loss2
                 loss1.backward()
-                loss_epoch += loss1.item()
+                loss_numodel += loss1.item()
                 if args['grad_norm']:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args['max_grad_norm'])
 
                 optimizer.step()
                 del preds, loss1
-            print('loss numerical model', loss_epoch)
+            loss_epoch += loss_numodel
+            print('numerical model {} loss: {}'.format(cmip_num, loss_numodel))
 
         model.eval()
         y_true, y_pred = [], []
