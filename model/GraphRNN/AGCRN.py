@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from lib.util import nino_index_flat
+from lib.util import sea_grid_nino_area
 
 torch.set_printoptions(threshold=10_000)
 
@@ -119,26 +119,61 @@ class AGCRN(nn.Module):
 
         self.encoder = AVWDCRNN(num_nodes, input_dim, rnn_units, cheb_k,
                                 embed_dim, num_layers)
-
-        # predictor
-        self.end_conv = nn.Conv2d(1, horizon * self.output_dim, kernel_size=(1, self.hidden_dim), bias=True)
+        self.fc = nn.Linear(rnn_units * 2, 24)
 
     def forward(self, sst, t300, ua, va, lon, lat):
         # source: B, T_1, N, D
-        # target: B, T_2, N, D
         source = torch.stack([sst, t300, ua, va, lon, lat], dim=-1)
 
         init_state = self.encoder.init_hidden(source.shape[0])
         output, _ = self.encoder(source, init_state, self.node_embeddings)  # B, T, N, hidden
-        # print(self.node_embeddings)
-        output = output[:, -1:, :, :]  # B, 1, N, hidden
+        output = output[:, -1, :, :]  # B, 1, N, hidden
+        nino_area = output[:, sea_grid_nino_area, :]
+        sst_grid = torch.mean(nino_area, dim=1)
+        output = torch.max(output, dim=1)[0]
+        output = torch.cat([output, sst_grid], dim=-1)
+        output = self.fc(output)
+        return output
 
-        # CNN based predictor
-        output = self.end_conv((output))  # B, T*C, N, 1
-        output = output.squeeze(-1).reshape(-1, self.horizon, self.output_dim, self.num_node)
-        output = output.permute(0, 1, 3, 2).squeeze(3)  # B, T, N
-        nino_indexes = nino_index_flat(output)
-        return output, nino_indexes
+
+#
+# class AGCRN(nn.Module):
+#     def __init__(self, num_nodes=1244, input_dim=6, embed_dim=24,
+#                  default_graph=True, rnn_units=48, num_layers=2, cheb_k=2,
+#                  output_dim=1, horizon=26):
+#         super(AGCRN, self, ).__init__()
+#         self.num_node = num_nodes
+#         self.input_dim = input_dim
+#         self.hidden_dim = rnn_units
+#         self.output_dim = output_dim
+#         self.horizon = horizon
+#         self.num_layers = num_layers
+#
+#         self.default_graph = default_graph
+#         self.node_embeddings = nn.Parameter(torch.randn(self.num_node, embed_dim), requires_grad=True)
+#
+#         self.encoder = AVWDCRNN(num_nodes, input_dim, rnn_units, cheb_k,
+#                                 embed_dim, num_layers)
+#
+#         # predictor
+#         self.end_conv = nn.Conv2d(1, horizon * self.output_dim, kernel_size=(1, self.hidden_dim), bias=True)
+#
+#     def forward(self, sst, t300, ua, va, lon, lat):
+#         # source: B, T_1, N, D
+#         # target: B, T_2, N, D
+#         source = torch.stack([sst, t300, ua, va, lon, lat], dim=-1)
+#
+#         init_state = self.encoder.init_hidden(source.shape[0])
+#         output, _ = self.encoder(source, init_state, self.node_embeddings)  # B, T, N, hidden
+#         # print(self.node_embeddings)
+#         output = output[:, -1:, :, :]  # B, 1, N, hidden
+#
+#         # CNN based predictor
+#         output = self.end_conv((output))  # B, T*C, N, 1
+#         output = output.squeeze(-1).reshape(-1, self.horizon, self.output_dim, self.num_node)
+#         output = output.permute(0, 1, 3, 2).squeeze(3)  # B, T, N
+#         nino_indexes = nino_index_flat(output)
+#         return output, nino_indexes
 
 
 if __name__ == '__main__':
@@ -151,10 +186,9 @@ if __name__ == '__main__':
     input4 = torch.rand(bch, 12, 1244).to(devcie)
     input5 = torch.rand(bch, 12, 1244).to(devcie)
     input6 = torch.rand(bch, 12, 1244).to(devcie)
-    # model.train()
-    output, preds = model(input1, input2, input3, input4, input5, input6)
-    del output, preds
-    output, preds = model(input1, input2, input3, input4, input5, input6)
+    preds = model(input1, input2, input3, input4, input5, input6)
+    print(preds.shape)
+    # output, preds = model(input1, input2, input3, input4, input5, input6)
 
     nParams = sum([p.nelement() for p in model.parameters() if p.requires_grad])
     print('number of parameters: %d' % nParams)

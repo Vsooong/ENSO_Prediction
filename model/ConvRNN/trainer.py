@@ -15,12 +15,15 @@ save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '
 
 
 def train():
-    init_seed(11)
-    indices = torch.randperm(1700)[:150]
+    init_seed(1995)
+    sample_num = 150
+    indices = torch.randperm(1700)[:sample_num]
     train_numerical = np.array([1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 15]) - 1
     val_numerical = np.array([3, 6, 9, 12]) - 1
     train_datasets = [Subset(load_train_data('cmip', which_num=num), indices) for num in train_numerical]
+    print('Training Samples: {}'.format(len(train_numerical) * sample_num))
     valid_datasets = [Subset(load_val_data('cmip', which_num=num), indices) for num in val_numerical]
+    print('Validation Samples: {}'.format(len(val_numerical) * sample_num))
     train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
     valid_loaders = [DataLoader(valid_dataset, batch_size=args['batch_size']) for valid_dataset in valid_datasets]
 

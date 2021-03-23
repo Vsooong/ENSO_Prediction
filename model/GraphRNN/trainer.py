@@ -10,24 +10,26 @@ from configs import args
 import numpy as np
 
 args['model_name'] = 'AGCRN'
+args['batch_size'] = 4
 current_dir = os.path.dirname(os.path.realpath(__file__))
 save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '.pth')
 
 
 def train():
     init_seed(1995)
-    indices = torch.randperm(1700)[:900]
+    sample_num = 150
+    indices = torch.randperm(1700)[:sample_num]
     train_numerical = np.array([1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 15]) - 1
     val_numerical = np.array([3, 6, 9, 12]) - 1
-    splitNum = 0
 
     train_datasets = [Subset(load_graph_data('cmip', which_num=num), indices) for num in train_numerical]
-    # valid_dataset = load_graph_data('soda', split_num=splitNum, mode='val')
+    print('Training Samples: {}'.format(len(train_numerical) * sample_num))
     valid_datasets = [Subset(load_graph_data('cmip', which_num=num), indices) for num in val_numerical]
+    print('Validation Samples: {}'.format(len(val_numerical) * sample_num))
     train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
     valid_loaders = [DataLoader(valid_dataset, batch_size=args['batch_size']) for valid_dataset in valid_datasets]
-    device = args['device']
 
+    device = args['device']
     model = args['model_list'][args['model_name']]()
     if args['pretrain'] and os.path.exists(save_dir):
         model.load_state_dict(torch.load(save_dir, map_location=device))
@@ -44,12 +46,10 @@ def train():
     for i in range(args['n_epochs']):
         model.train()
         loss_epoch = 0
-        loss1_sum = 0
-        loss2_sum = 0
         model.to('cuda')
         for cmip_num, train_loader in enumerate(train_loaders):
             loss_numodel = 0
-            for step, (sst, t300, ua, va, lon, lat, label, sst_label) in enumerate(train_loader):
+            for step, (sst, t300, ua, va, lon, lat, label) in enumerate(train_loader):
                 sst = sst.to(device)
                 t300 = t300.to(device)
                 ua = ua.to(device)
@@ -57,22 +57,18 @@ def train():
                 lon = lon.to(device)
                 lat = lat.to(device)
                 label = label.to(device)
-                sst_label = sst_label.to(device)
+                # sst_label = sst_label.to(device)
 
                 optimizer.zero_grad()
-                output, preds = model(sst, t300, ua, va, lon, lat)
-                loss1 = loss_fn(preds, label)
-                loss2 = loss_fn(output, sst_label)
-                loss = loss2 + loss1 / 5
+                preds = model(sst, t300, ua, va, lon, lat)
+                loss = loss_fn(preds, label)
                 loss.backward()
                 loss_numodel += loss.detach().item()
-                # loss1_sum += loss1.item()
-                # loss2_sum += loss2.item()
                 if args['grad_norm']:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args['max_grad_norm'])
 
                 optimizer.step()
-                del output, preds, loss, loss1, loss2
+                del preds, loss
 
             loss_epoch += loss_numodel
             print('numerical model {} loss: {}'.format(cmip_num, loss_numodel))
@@ -80,7 +76,7 @@ def train():
         model.eval()
         y_true, y_pred = [], []
         for cmip_num, valid_loader in enumerate(valid_loaders):
-            for step, (sst, t300, ua, va, lon, lat, label, sst_label) in enumerate(valid_loader):
+            for step, (sst, t300, ua, va, lon, lat, label) in enumerate(valid_loader):
                 sst = sst.to(device)
                 t300 = t300.to(device)
                 ua = ua.to(device)
@@ -88,10 +84,10 @@ def train():
                 lon = lon.to(device)
                 lat = lat.to(device)
                 label = label.to(device)
-                output, preds = model(sst, t300, ua, va, lon, lat)
+                preds = model(sst, t300, ua, va, lon, lat)
                 y_pred.append(preds.detach())
                 y_true.append(label.detach())
-                del output, preds
+                del preds
 
         y_true = torch.cat(y_true, axis=0)
         y_pred = torch.cat(y_pred, axis=0)

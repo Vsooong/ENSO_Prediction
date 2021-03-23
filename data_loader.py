@@ -35,12 +35,12 @@ class GraphDataSet(Dataset):
         self.data = data
 
     def __len__(self):
-        return len(self.data['sst']) - 38
+        return len(self.data['sst']) - 36
 
     def __getitem__(self, idx):
         return self.data['sst'][idx:idx + 12], self.data['t300'][idx:idx + 12], self.data['ua'][idx:idx + 12], \
                self.data['va'][idx:idx + 12], self.data['lon'][idx:idx + 12], self.data['lat'][idx:idx + 12], \
-               self.data['label'][idx + 12:idx + 36], self.data['sst'][idx + 12:idx + 38]
+               self.data['label'][idx + 12:idx + 36]
 
 
 def load_data():
@@ -196,7 +196,6 @@ def load_graph_data(which_data='soda', split_num=960, which_num=0, mode='train')
     # print(nino_area)
     lon_grid, lat_grid = get_flat_lon_lat(months)
 
-    print('Samples: {}'.format(len(train_label) - 38))
     dict_train = {
         'sst': train_sst / 1,
         't300': train_t300 / 1,
