@@ -6,8 +6,9 @@ import numpy as np
 import zipfile
 from data_loader import land_mask, get_flat_lon_lat
 from lib.util import norm
+import re
 
-args['model_name'] = 'simpleSpatailTimeNN'
+args['model_name'] = 'CNN2_3'
 
 
 def mask_flat_tensor(sst, t300, ua, va):
@@ -29,8 +30,10 @@ def mask_flat_tensor(sst, t300, ua, va):
     return sst, t300, ua / 5, va / 5, lon.unsqueeze(0) / 180, lat.unsqueeze(0) / 60
 
 
-def test(in_path='./tcdata/enso_round1_test_20210201/',
+def test(in_path='./tcdata/enso_final_test_data_B/',
          out_path='result'):
+    # def test(in_path='D:\\github\\data\\data\\meta_data\\test样例',
+    #          out_path='result'):
     if not os.path.exists(in_path):
         for path in args['path_list']:
             if os.path.exists(path):
@@ -56,6 +59,8 @@ def test(in_path='./tcdata/enso_round1_test_20210201/',
         t300 = torch.as_tensor(np.nan_to_num(data[..., 1]), dtype=torch.float).unsqueeze(0)
         ua = torch.as_tensor(np.nan_to_num(data[..., 2]), dtype=torch.float).unsqueeze(0)
         va = torch.as_tensor(np.nan_to_num(data[..., 3]), dtype=torch.float).unsqueeze(0)
+        start_month = torch.as_tensor(int(re.split("-|_", os.path.basename(i))[2]))
+
         if args['model_name'] == 'AGCRN':
             sst, t300, ua, va, lon, lat = mask_flat_tensor(sst, t300, ua, va)
             preds = model(sst.to(device), t300.to(device), ua.to(device), va.to(device), lon.to(device), lat.to(device))
@@ -63,7 +68,7 @@ def test(in_path='./tcdata/enso_round1_test_20210201/',
             adj = torch.tensor(norm(np.ones((4, 4))), dtype=torch.float).to(device)
             preds = model(sst.to(device), t300.to(device), ua.to(device), va.to(device), adj)
         else:
-            preds = model(sst.to(device), t300.to(device), ua.to(device), va.to(device))
+            preds = model(sst.to(device), t300.to(device), ua.to(device), va.to(device), start_month.long().to(device))
         if len(preds) == 2:
             preds = preds[1]
         preds = preds.squeeze(0).cpu().detach().numpy()

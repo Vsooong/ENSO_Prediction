@@ -10,17 +10,17 @@ from configs import args
 import numpy as np
 
 args['model_name'] = 'AGCRN'
-args['batch_size'] = 4
+args['batch_size'] = 16
 current_dir = os.path.dirname(os.path.realpath(__file__))
 save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '.pth')
 
 
 def train():
     init_seed(1995)
-    sample_num = 150
+    sample_num = 1000
     indices = torch.randperm(1700)[:sample_num]
-    train_numerical = np.array([1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 15]) - 1
-    val_numerical = np.array([3, 6, 9, 12]) - 1
+    train_numerical = np.array([1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 15]) - 1
+    val_numerical = np.array([6, 9, 14]) - 1
 
     train_datasets = [Subset(load_graph_data('cmip', which_num=num), indices) for num in train_numerical]
     print('Training Samples: {}'.format(len(train_numerical) * sample_num))

@@ -27,7 +27,8 @@ class GridEarthDataSet(Dataset):
 
     def __getitem__(self, idx):
         return self.data['sst'][idx:idx + 12], self.data['t300'][idx:idx + 12], self.data['ua'][idx:idx + 12], \
-               self.data['va'][idx:idx + 12], self.data['label'][idx + 12:idx + 36], self.data['sst'][idx + 12:idx + 38]
+               self.data['va'][idx:idx + 12], self.data['label'][idx + 12:idx + 36], \
+               self.data['month'][idx:idx + 12], self.data['sst'][idx + 12:idx + 38]
 
 
 class GraphDataSet(Dataset):
@@ -89,20 +90,22 @@ def load_train_data(which_data='soda', split_num=960, which_num=0):
         train_ua = np.nan_to_num(np.load(args['soda_ua'])['ua'][:split_num + 36])
         train_va = np.nan_to_num(np.load(args['soda_va'])['va'][:split_num + 36])
         train_label = np.nan_to_num(np.load(args['soda_label'])['nino'][0, :split_num + 36])
-
+        train_month = np.arange(0, split_num + 36) % 12 + 1
     else:
         train_sst = np.nan_to_num(np.load(args['cmip_sst'])['sst'][which_num])
         train_t300 = np.nan_to_num(np.load(args['cmip_t300'])['t300'][which_num])
         train_ua = np.nan_to_num(np.load(args['cmip_ua'])['ua'][which_num])
         train_va = np.nan_to_num(np.load(args['cmip_va'])['va'][which_num])
         train_label = np.nan_to_num(np.load(args['cmip_labels'])['nino'][which_num])
+        train_month = np.arange(0, len(train_sst)) % 12 + 1
 
-    print('Train samples: {}'.format(len(train_label) - 36))
+    # print('Train samples: {}'.format(len(train_label) - 36))
     dict_train = {
         'sst': train_sst,
         't300': train_t300,
         'ua': train_ua,
         'va': train_va,
+        'month': train_month,
         'label': train_label}
 
     train_dataset = GridEarthDataSet(dict_train)
@@ -116,18 +119,22 @@ def load_val_data(which_data='soda', split_num=960, which_num=0):
         val_ua = np.nan_to_num(np.load(args['soda_ua'])['ua'][split_num:])
         val_va = np.nan_to_num(np.load(args['soda_va'])['va'][split_num:])
         val_label = np.nan_to_num(np.load(args['soda_label'])['nino'][0, split_num:])
+        val_month = np.arange(split_num, split_num + len(val_sst)) % 12 + 1
     else:
         val_sst = np.nan_to_num(np.load(args['cmip_sst'])['sst'][which_num])
         val_t300 = np.nan_to_num(np.load(args['cmip_t300'])['t300'][which_num])
         val_ua = np.nan_to_num(np.load(args['cmip_ua'])['ua'][which_num])
         val_va = np.nan_to_num(np.load(args['cmip_va'])['va'][which_num])
         val_label = np.nan_to_num(np.load(args['cmip_labels'])['nino'][which_num])
-    print('Valid samples: {}'.format(len(val_label) - 36))
+        val_month = np.arange(0, len(val_sst)) % 12 + 1
+
+    # print('Valid samples: {}'.format(len(val_label) - 36))
     dict_valid = {
         'sst': val_sst,
         't300': val_t300,
         'ua': val_ua,
         'va': val_va,
+        'month': val_month,
         'label': val_label}
     valid_dataset = GridEarthDataSet(dict_valid)
     return valid_dataset

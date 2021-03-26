@@ -77,11 +77,16 @@ def nan_analysis():
 if __name__ == '__main__':
     # visualize()
     import torch
+    import os
+    import re
 
-    data = xr.open_dataset(args['cmip_data'])
-    sst = torch.as_tensor(data['t300'][9, 2].values)
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    print(current_dir)
+
+    data = xr.open_dataset(args['cmip_label'])
+    sst = torch.as_tensor(data['label'][9, 2].values)
     plt.imshow(sst)
-    import seaborn as sns
+    # import seaborn as sns
 
     # sns.histplot(torch.flatten(sst))
     plt.show()

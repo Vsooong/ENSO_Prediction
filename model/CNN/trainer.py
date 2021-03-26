@@ -9,7 +9,7 @@ import torch.nn as nn
 from configs import args
 import numpy as np
 
-args['model_name'] = 'simpleSpatailTimeNN'
+args['model_name'] = 'CNN2_3'
 args['batch_size'] = 64
 current_dir = os.path.dirname(os.path.realpath(__file__))
 save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '.pth')
@@ -22,10 +22,10 @@ def train():
     # train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
     # valid_loader = DataLoader(valid_dataset, batch_size=args['batch_size'])
 
-    sample_num = 150
+    sample_num = 1600
     indices = torch.randperm(1700)[:sample_num]
-    train_numerical = np.array([1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 15]) - 1
-    val_numerical = np.array([3, 6, 9, 12]) - 1
+    train_numerical = np.array([1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 15]) - 1
+    val_numerical = np.array([6, 9]) - 1
     train_datasets = [Subset(load_train_data('cmip', which_num=num), indices) for num in train_numerical]
     print('Training Samples: {}'.format(len(train_numerical) * sample_num))
     valid_datasets = [Subset(load_val_data('cmip', which_num=num), indices) for num in val_numerical]
@@ -39,7 +39,7 @@ def train():
         model.load_state_dict(torch.load(save_dir, map_location=device))
         print('load model from:', save_dir)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=args['learning_rate'])
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args['learning_rate'])
     loss_fn = nn.MSELoss()
 
     model.to(device)
@@ -53,14 +53,16 @@ def train():
         model.train()
         loss_epoch = 0
         for train_loader in train_loaders:
-            for step, (sst, t300, ua, va, label, sst_label) in enumerate(train_loader):
+            for step, (sst, t300, ua, va, label, month, sst_label) in enumerate(train_loader):
                 sst = sst.to(device).float()
                 t300 = t300.to(device).float()
                 ua = ua.to(device).float()
                 va = va.to(device).float()
-                optimizer.zero_grad()
+                month = month[:, :1].to(device).long()
                 label = label.to(device).float()
-                preds = model(sst, t300, ua, va)
+                optimizer.zero_grad()
+
+                preds = model(sst, t300, ua, va, month)
                 loss = loss_fn(preds, label)
                 loss.backward()
                 loss_epoch += loss.item()
@@ -73,13 +75,14 @@ def train():
         model.eval()
         y_true, y_pred = [], []
         for valid_loader in valid_loaders:
-            for step, (sst, t300, ua, va, label, sst_label) in enumerate(valid_loader):
+            for step, (sst, t300, ua, va, label, month, sst_label) in enumerate(valid_loader):
                 sst = sst.to(device).float()
                 t300 = t300.to(device).float()
                 ua = ua.to(device).float()
                 va = va.to(device).float()
+                month = month[:, :1].to(device).long()
                 label = label.to(device).float()
-                preds = model(sst, t300, ua, va)
+                preds = model(sst, t300, ua, va, month)
                 y_pred.append(preds.detach())
                 y_true.append(label.detach())
                 del preds
