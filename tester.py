@@ -8,7 +8,7 @@ from data_loader import land_mask, get_flat_lon_lat
 from lib.util import norm
 import re
 
-args['model_name'] = 'CNN2_3'
+args['model_name'] = 'lstmNN'
 
 
 def mask_flat_tensor(sst, t300, ua, va):
@@ -67,8 +67,12 @@ def test(in_path='./tcdata/enso_final_test_data_B/',
         elif args['model_name'] == 'graphCNN':
             adj = torch.tensor(norm(np.ones((4, 4))), dtype=torch.float).to(device)
             preds = model(sst.to(device), t300.to(device), ua.to(device), va.to(device), adj)
-        else:
+        elif args['model_name'] == 'CNN2_5':
             preds = model(sst.to(device), t300.to(device), ua.to(device), va.to(device), start_month.long().to(device))
+        else:
+            month = torch.arange(start_month, start_month + 12).unsqueeze(0)
+            preds = model(sst.to(device), t300.to(device), ua.to(device), va.to(device), month.float().to(device))
+
         if len(preds) == 2:
             preds = preds[1]
         preds = preds.squeeze(0).cpu().detach().numpy()
@@ -76,7 +80,7 @@ def test(in_path='./tcdata/enso_final_test_data_B/',
         save_path = os.path.join(out_path, os.path.basename(i))
         np.save(file=save_path, arr=preds)
         del preds
-    make_zip(out_path, 'result.zip')
+        make_zip(out_path, 'result.zip')
 
 
 def make_zip(source_dir, output_filename):
@@ -89,8 +93,3 @@ def make_zip(source_dir, output_filename):
 
 if __name__ == '__main__':
     test()
-    # path = r'D:\data\enso\test样例_20210207_update\test样例\label/test_0144-01-12.npy'
-    # from lib.metric import eval_score
-    # data=np.expand_dims( np.load(path),axis=0)
-    # print(data)
-    # print(eval_score(data,data))

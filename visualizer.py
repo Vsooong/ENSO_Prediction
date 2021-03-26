@@ -78,15 +78,21 @@ if __name__ == '__main__':
     # visualize()
     import torch
     import os
-    import re
+
+    torch.set_printoptions(profile="full")
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
     print(current_dir)
 
-    data = xr.open_dataset(args['cmip_label'])
-    sst = torch.as_tensor(data['label'][9, 2].values)
-    plt.imshow(sst)
-    # import seaborn as sns
+    data = np.load(args['cmip_labels'])
+    sst = torch.tensor(data['nino']).float()
+    sst = torch.flatten(sst)
+    print(torch.max(sst))
+    print(torch.min(sst))
+    # weight = torch.exp(sst * sst / 2)
+    # sst = sst * weight
+    import seaborn as sns
+    import matplotlib.pyplot as plt
 
-    # sns.histplot(torch.flatten(sst))
+    sns.histplot(sst.numpy())
     plt.show()

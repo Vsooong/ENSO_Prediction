@@ -37,8 +37,17 @@ def get_memory_usage(device):
 
 
 # NINO3.4区（170°W-120°W，5°S-5°N）
-def nino_index(ssta_year):
-    year, months = ssta_year.size()[:2]
+def nino_index(ssta_year, keep_dim=False):
+    if not keep_dim:
+        batch, months, h, w = ssta_year.size()
+    else:
+        batch, months, h, w = ssta_year.size()
+        x1 = ssta_year[:, months - 2:months - 1, ...]
+        x2 = ssta_year[:, months - 1:months, ...]
+        y1 = 0.5 * x1 + 0.5 * x2
+        y2 = 1.5 * x2 - 0.5 * x1
+        ssta_year = torch.cat([ssta_year, y1, y2], dim=1)
+        months += 2
     ssta1 = ssta_year[:, 0:months - 2, 10:13, 38:49]
     ssta2 = ssta_year[:, 1:months - 1, 10:13, 38:49]
     ssta3 = ssta_year[:, 2:months, 10:13, 38:49]
@@ -234,6 +243,7 @@ def make_layers(block):
 if __name__ == '__main__':
     from configs import args
     import xarray as xr
+
     # from global_land_mask import globe
     #
     #
@@ -255,10 +265,13 @@ if __name__ == '__main__':
     #
     #
     # mask = land_mask()
-    # data = xr.open_dataset(args['sota_data'])['sst'].values[0, ...]
-    # label = xr.open_dataset(args['sota_label'])['nino']
-    # print(label[0].values)
-    # # print(data.shape)
+    import torch
+
+    data = torch.as_tensor(xr.open_dataset(args['cmip_data'])['sst'].values[1, ...]).float().unsqueeze(0)
+    label = xr.open_dataset(args['cmip_label'])['nino']
+    print(torch.as_tensor(label[1].values).float())
+    print(nino_index(data, keep_dim=True))
+    # print(data.shape)
     # data[:, mask] = np.nan
     # data = torch.flatten(torch.as_tensor(data, dtype=torch.float))
     # data = data[~torch.isnan(data)]

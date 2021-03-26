@@ -17,11 +17,6 @@ save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '
 
 def train():
     init_seed(11)
-    # train_datasets = [load_train_data('cmip', which_num=num) for num in range(15)]
-    # valid_dataset = load_val_data('soda')
-    # train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
-    # valid_loader = DataLoader(valid_dataset, batch_size=args['batch_size'])
-
     sample_num = 1600
     indices = torch.randperm(1700)[:sample_num]
     train_numerical = np.array([1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 15]) - 1

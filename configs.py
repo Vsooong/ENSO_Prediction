@@ -1,8 +1,10 @@
 from model.CNN.CNN2_4 import simpleSpatailTimeNN_month
 from model.CNN.CNN2_3 import simpleSpatailTimeNN
+from model.CNN.CNN2_5 import CNN2_5
 from model.GraphCNN.graph_CNN import graphCNN
 from model.ConvRNN.convlstm import convLSTM
 from model.GraphRNN.AGCRN import AGCRN
+from model.RNN.lstm import lstmNN
 import torch
 import os
 
@@ -10,9 +12,11 @@ args = {
     'model_list': {
         'CNN2_3': simpleSpatailTimeNN,
         'CNN2_4': simpleSpatailTimeNN_month,
+        'CNN2_5': CNN2_5,
         'graphCNN': graphCNN,
         'convLSTM': convLSTM,
         'AGCRN': AGCRN,
+        'lstmNN': lstmNN,
     },
     'pretrain': False,
     'n_epochs': 2000,
