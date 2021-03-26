@@ -1,4 +1,5 @@
-from lib.util import init_seed, print_model_parameters, norm
+from lib.util import init_seed, print_model_parameters
+from lib.metric import weighted_mse_loss
 from data_loader import load_train_data, load_val_data
 from torch.utils.data import DataLoader, Subset
 import torch
@@ -17,7 +18,7 @@ save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '
 
 def train():
     init_seed(11)
-    sample_num = 1600
+    sample_num = 400
     indices = torch.randperm(1700)[:sample_num]
     train_numerical = np.array([1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 15]) - 1
     val_numerical = np.array([6, 9]) - 1
@@ -35,10 +36,10 @@ def train():
         print('load model from:', save_dir)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args['learning_rate'])
-    loss_fn = nn.MSELoss()
+    # loss_fn = nn.MSELoss().to(device)
+    loss_fn = weighted_mse_loss
 
     model.to(device)
-    loss_fn.to(device)
     print_model_parameters(model)
 
     best_score = float('-inf')

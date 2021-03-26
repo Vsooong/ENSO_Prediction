@@ -1,4 +1,4 @@
-from model.CNN.CNN2_4 import simpleSpatailTimeNN_month
+from model.CNN.CNN2_4 import CNN2_4
 from model.CNN.CNN2_3 import simpleSpatailTimeNN
 from model.CNN.CNN2_5 import CNN2_5
 from model.GraphCNN.graph_CNN import graphCNN
@@ -11,7 +11,7 @@ import os
 args = {
     'model_list': {
         'CNN2_3': simpleSpatailTimeNN,
-        'CNN2_4': simpleSpatailTimeNN_month,
+        'CNN2_4': CNN2_4,
         'CNN2_5': CNN2_5,
         'graphCNN': graphCNN,
         'convLSTM': convLSTM,

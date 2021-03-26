@@ -1,4 +1,17 @@
 import numpy as np
+import torch
+
+torch.set_printoptions(profile="full")
+
+
+def weighted_mse_loss(input, target, weight=None, sum=False):
+    if weight is None:
+        weight = 10 - torch.relu(10.0 - torch.exp(target * target / 2))
+    if not sum:
+        loss = (weight * (input - target) ** 2).mean()
+    else:
+        loss = torch.sum(weight * (input - target) ** 2)
+    return loss
 
 
 def coreff(x, y):
@@ -26,3 +39,14 @@ def eval_score(preds, label):
 
         acskill += a[i] * np.log(i + 1) * cor
     return 2 / 3 * acskill - RMSE
+
+
+if __name__ == '__main__':
+    import torch
+
+    # :param
+    # x: (b, c, t, h, w)
+
+    pred = torch.randn(12, 24)
+    label = torch.randn(12, 24)
+    weighted_mse_loss(pred, label)

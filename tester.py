@@ -8,7 +8,7 @@ from data_loader import land_mask, get_flat_lon_lat
 from lib.util import norm
 import re
 
-args['model_name'] = 'lstmNN'
+args['model_name'] = 'CNN2_4'
 
 
 def mask_flat_tensor(sst, t300, ua, va):
@@ -67,7 +67,7 @@ def test(in_path='./tcdata/enso_final_test_data_B/',
         elif args['model_name'] == 'graphCNN':
             adj = torch.tensor(norm(np.ones((4, 4))), dtype=torch.float).to(device)
             preds = model(sst.to(device), t300.to(device), ua.to(device), va.to(device), adj)
-        elif args['model_name'] == 'CNN2_5':
+        elif args['model_name'] == 'CNN2_5' or args['model_name'] == 'CNN2_4':
             preds = model(sst.to(device), t300.to(device), ua.to(device), va.to(device), start_month.long().to(device))
         else:
             month = torch.arange(start_month, start_month + 12).unsqueeze(0)
