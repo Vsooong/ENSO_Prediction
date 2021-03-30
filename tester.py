@@ -59,7 +59,7 @@ def test(in_path='./tcdata/enso_final_test_data_B/',
         t300 = torch.as_tensor(np.nan_to_num(data[..., 1]), dtype=torch.float).unsqueeze(0)
         ua = torch.as_tensor(np.nan_to_num(data[..., 2]), dtype=torch.float).unsqueeze(0)
         va = torch.as_tensor(np.nan_to_num(data[..., 3]), dtype=torch.float).unsqueeze(0)
-        start_month = torch.as_tensor(int(re.split("-|_", os.path.basename(i))[2]))
+        start_month = torch.as_tensor(int(re.split("-|_", os.path.basename(i))[2])).unsqueeze(0)
 
         if args['model_name'] == 'AGCRN':
             sst, t300, ua, va, lon, lat = mask_flat_tensor(sst, t300, ua, va)
@@ -76,7 +76,6 @@ def test(in_path='./tcdata/enso_final_test_data_B/',
         if len(preds) == 2:
             preds = preds[1]
         preds = preds.squeeze(0).cpu().detach().numpy()
-
         save_path = os.path.join(out_path, os.path.basename(i))
         np.save(file=save_path, arr=preds)
         del preds

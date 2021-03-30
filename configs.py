@@ -1,5 +1,5 @@
+from model.CNN.CNN2_3 import CNN2_3
 from model.CNN.CNN2_4 import CNN2_4
-from model.CNN.CNN2_3 import simpleSpatailTimeNN
 from model.CNN.CNN2_5 import CNN2_5
 from model.GraphCNN.graph_CNN import graphCNN
 from model.ConvRNN.convlstm import convLSTM
@@ -10,7 +10,7 @@ import os
 
 args = {
     'model_list': {
-        'CNN2_3': simpleSpatailTimeNN,
+        'CNN2_3': CNN2_3,
         'CNN2_4': CNN2_4,
         'CNN2_5': CNN2_5,
         'graphCNN': graphCNN,
@@ -18,14 +18,17 @@ args = {
         'AGCRN': AGCRN,
         'lstmNN': lstmNN,
     },
-    'pretrain': False,
-    'n_epochs': 2000,
-    'learning_rate': 1e-4,
+    'pretrain': True,
+    'n_epochs': 100,
+    'learning_rate': 3e-4,
+    'lr_decay': True,
+    'lr_decay_rate': 0.3,
+    'lr_decay_step': [5, 20, 40, 60],
     'batch_size': 12,
     'device': 'cuda:0' if torch.cuda.is_available() else 'cpu',
     'grad_norm': False,
     'max_grad_norm': 5,
-    'early_stop_patience': 20000,
+    'early_stop_patience': 50,
 
     'cmip_data': r'D:\data\enso\meta_data\CMIP_train.nc',
     'cmip_label': r'D:\data\enso\meta_data\CMIP_label.nc',

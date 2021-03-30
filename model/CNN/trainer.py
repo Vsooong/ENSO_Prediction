@@ -1,5 +1,5 @@
 from lib.util import init_seed, print_model_parameters
-from lib.metric import weighted_mse_loss
+from lib.metric import score_loss
 from data_loader import load_train_data, load_val_data
 from torch.utils.data import DataLoader, Subset
 import torch
@@ -11,36 +11,52 @@ from configs import args
 import numpy as np
 
 args['model_name'] = 'CNN2_3'
-args['batch_size'] = 64
+args['batch_size'] = 32
 current_dir = os.path.dirname(os.path.realpath(__file__))
 save_dir = os.path.join(current_dir, '../../experiments', args['model_name'] + '.pth')
 
 
 def train():
     init_seed(11)
-    sample_num = 400
+    sample_num = 1600
+    split_num = 720
     indices = torch.randperm(1700)[:sample_num]
-    train_numerical = np.array([1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 15]) - 1
-    val_numerical = np.array([6, 9]) - 1
+    # train_numerical = np.array([0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14])
+    # val_numerical = np.array([8])
+    train_numerical = np.array([])
+    val_numerical = np.array([])
+
     train_datasets = [Subset(load_train_data('cmip', which_num=num), indices) for num in train_numerical]
-    print('Training Samples: {}'.format(len(train_numerical) * sample_num))
+    train_datasets.append(load_train_data('soda', split_num=split_num))
+    print('Training Samples: {}'.format(len(train_numerical) * sample_num + split_num))
     valid_datasets = [Subset(load_val_data('cmip', which_num=num), indices) for num in val_numerical]
-    print('Validation Samples: {}'.format(len(val_numerical) * sample_num))
+    valid_datasets.append(load_val_data('soda', split_num=split_num + 60))
+    print('Validation Samples: {}'.format(len(val_numerical) * sample_num + 1200 - split_num))
+
     train_loaders = [DataLoader(train_dataset, batch_size=args['batch_size']) for train_dataset in train_datasets]
     valid_loaders = [DataLoader(valid_dataset, batch_size=args['batch_size']) for valid_dataset in valid_datasets]
 
     device = args['device']
     model = args['model_list'][args['model_name']]()
+    print_model_parameters(model)
+
     if args['pretrain'] and os.path.exists(save_dir):
         model.load_state_dict(torch.load(save_dir, map_location=device))
         print('load model from:', save_dir)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args['learning_rate'])
-    # loss_fn = nn.MSELoss().to(device)
-    loss_fn = weighted_mse_loss
+    if args['lr_decay']:
+        print('Applying learning rate decay.')
+        lr_decay_steps = [int(i) for i in args['lr_decay_step']]
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer=optimizer,
+                                                            milestones=lr_decay_steps,
+                                                            gamma=args['lr_decay_rate'])
+    else:
+        lr_scheduler = None
+    loss_fn = nn.MSELoss().to(device)
+    # loss_fn = score_loss
 
     model.to(device)
-    print_model_parameters(model)
 
     best_score = float('-inf')
     not_improved_count = 0
@@ -54,7 +70,8 @@ def train():
                 t300 = t300.to(device).float()
                 ua = ua.to(device).float()
                 va = va.to(device).float()
-                month = month[:, :1].to(device).long()
+                month = month.to(device).float()
+                # print(month.shape)
                 label = label.to(device).float()
                 optimizer.zero_grad()
 
@@ -68,6 +85,9 @@ def train():
                 optimizer.step()
                 del preds, loss
 
+        if args['lr_decay']:
+            lr_scheduler.step()
+
         model.eval()
         y_true, y_pred = [], []
         for valid_loader in valid_loaders:
@@ -76,7 +96,7 @@ def train():
                 t300 = t300.to(device).float()
                 ua = ua.to(device).float()
                 va = va.to(device).float()
-                month = month[:, :1].to(device).long()
+                month = month.to(device).float()
                 label = label.to(device).float()
                 preds = model(sst, t300, ua, va, month)
                 y_pred.append(preds.detach())

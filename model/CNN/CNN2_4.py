@@ -36,7 +36,6 @@ class CNN2_4(nn.Module):
 
         self.output_gate = nn.Linear(hidden_dim, 24, bias=True)
 
-
     def make_cnn_block(self):
         return nn.ModuleList(
             [nn.Conv2d(12, 12, kernel_size=3, stride=1, padding=1),
@@ -81,7 +80,7 @@ class CNN2_4(nn.Module):
         x = self.pool2(x).squeeze(dim=-2)
         x = self.drop(x)
 
-        n = self.embedding(n)
+        n = self.embedding(n).squeeze(dim=1)
         Z = nn.Sigmoid()(self.reset_gate_x(x) + self.reset_gate_n(n))
         R = nn.Sigmoid()(self.update_gate_x(x) + self.update_gate_n(n))
         n_tilda = torch.tanh(self.select_gate_x(x) + self.select_gate_n(R * n))

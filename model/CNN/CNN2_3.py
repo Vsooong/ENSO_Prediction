@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from lib.util import print_model_parameters
+from lib.util import print_model_parameters, nino_index
 from lib.land_sea import land_mask
 from lib.non_local_em_gaussian import NONLocalBlock3D
 
@@ -19,9 +19,9 @@ class SeparableConv2d(nn.Module):
         return x
 
 
-class simpleSpatailTimeNN(nn.Module):
+class CNN2_3(nn.Module):
     def __init__(self, hidden_planes=64):
-        super(simpleSpatailTimeNN, self).__init__()
+        super(CNN2_3, self).__init__()
         self.planes = hidden_planes
         self.conv1 = self.make_cnn_block()
         self.conv2 = nn.Conv3d(self.planes, self.planes, kernel_size=(3, 3, 3), stride=1, padding=1, bias=False)
@@ -33,10 +33,11 @@ class simpleSpatailTimeNN(nn.Module):
         self.conv4 = nn.Conv3d(self.planes, self.planes, kernel_size=(3, 3, 3), stride=1)
         self.linear = nn.Linear(self.planes * 64, 24)
 
-        # self.batch_norm = nn.BatchNorm1d(12, affine=False)
-        # self.lstm = nn.LSTM(3456, n_lstm_units, 1, bidirectional=True, batch_first=True)
-        # self.pool_rnn = nn.AdaptiveAvgPool2d((1, self.planes * 2))
-        self.drop = nn.Dropout(0.3)
+        # self.nino_lstm = nn.GRU(2, hidden_planes, batch_first=True)
+        # self.Wi = nn.Linear(hidden_planes, 24)
+        # self.Wg = nn.Linear(hidden_planes * 2, 24)
+        # self.Wf = nn.Linear(hidden_planes * 2, 24)
+        # self.drop = nn.Dropout(0.3)
 
     def make_cnn_block(self):
         return nn.Sequential(
@@ -49,7 +50,7 @@ class simpleSpatailTimeNN(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-    def forward(self, sst, t300, ua, va, month=None):
+    def forward(self, sst, t300, ua, va, month_seq=None):
         input = torch.stack([sst, t300, ua, va], dim=2)
         batch, month, var, h, w = input.size()
         input = input.view(batch * month, var, h, w)
@@ -65,18 +66,24 @@ class simpleSpatailTimeNN(nn.Module):
         # print(x.shape)
         x = self.conv4(x)
         x = torch.flatten(x, start_dim=1)
-        x = self.drop(x)
+        # x = self.drop(x)
         x = self.linear(x)
 
-        # x, _ = self.lstm(x)
-        # x = self.pool_rnn(x).squeeze(dim=-2)
-        # x = self.linear(x)
+        # ninos = nino_index(sst, shrink_month=False)
+        # months = month_seq / 12
+        # base_feature = torch.stack([ninos, months], dim=2)
+        # base_feature = self.nino_lstm(base_feature)[1][0]
+        # fuse_x = torch.cat([x, base_feature], dim=1)
+        # i = self.Wi(x)
+        # z = torch.sigmoid(self.Wg(fuse_x))
+        # f = self.Wf(fuse_x)
+        # x = (1 - z) * i + z * f
         return x
 
 
 #
 class simpleSpatailTimeNN2(nn.Module):
-    def __init__(self, n_cnn_layer: int = 1, kernals: list = [3, 3], n_lstm_units: int = 64):
+    def __init__(self, n_cnn_layer: int = 1, kernals: list = [3], n_lstm_units: int = 64):
         super(simpleSpatailTimeNN2, self).__init__()
         self.conv1 = nn.ModuleList(
             [nn.Conv2d(in_channels=12, out_channels=12, kernel_size=i, padding=1) for i in kernals])
@@ -91,7 +98,7 @@ class simpleSpatailTimeNN2(nn.Module):
         self.pool3 = nn.AdaptiveAvgPool2d((1, 128))
         self.batch_norm = nn.BatchNorm1d(12, affine=False)
         self.lstm = nn.LSTM(1728 * 4, n_lstm_units, 2, bidirectional=True, batch_first=True)
-        self.linear = nn.Linear(128 + 12, 24)
+        self.linear = nn.Linear(128, 24)
         self.drop = nn.Dropout(0.3)
 
     def forward(self, sst, t300, ua, va, month=None, device='cuda:0' if torch.cuda.is_available() else 'cpu'):
@@ -120,8 +127,8 @@ class simpleSpatailTimeNN2(nn.Module):
         x = self.batch_norm(x)
         x, _ = self.lstm(x)
         x = self.pool3(x).squeeze(dim=-2)
-        if month is not None:
-            x = torch.cat([x, month / 12], dim=-1)
+        # if month is not None:
+        #     x = torch.cat([x, month / 12], dim=-1)
 
         x = self.drop(x)
         x = self.linear(x)

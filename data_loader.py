@@ -45,13 +45,13 @@ class GraphDataSet(Dataset):
 
 
 def load_data():
-    train = xr.open_dataset(args['sota_data'])
-    label = xr.open_dataset(args['sota_label'])
-    train_sst = train['sst'][:80, :12].values
-    train_t300 = train['t300'][:80, :12].values
-    train_ua = train['ua'][:80, :12].values
-    train_va = train['va'][:80, :12].values
-    train_label = label['nino'][:80, 12:36].values
+    train = xr.open_dataset(args['cmip_data'])
+    label = xr.open_dataset(args['cmip_label'])
+    train_sst = train['sst'][:, :12].values
+    train_t300 = train['t300'][:, :12].values
+    train_ua = train['ua'][:, :12].values
+    train_va = train['va'][:, :12].values
+    train_label = label['nino'][:, 12:36].values
 
     train_ua = np.nan_to_num(train_ua)
     train_va = np.nan_to_num(train_va)
@@ -60,11 +60,11 @@ def load_data():
 
     train2 = xr.open_dataset(args['sota_data'])
     label2 = xr.open_dataset(args['sota_label'])
-    train_sst2 = train2['sst'][80:, :12].values
-    train_t3002 = train2['t300'][80:, :12].values
-    train_ua2 = train2['ua'][80:, :12].values
-    train_va2 = train2['va'][80:, :12].values
-    train_label2 = label2['nino'][80:, 12:36].values
+    train_sst2 = train2['sst'][:, :12].values
+    train_t3002 = train2['t300'][:, :12].values
+    train_ua2 = train2['ua'][:, :12].values
+    train_va2 = train2['va'][:, :12].values
+    train_label2 = label2['nino'][:, 12:36].values
     print('Train samples: {}, Valid samples: {}'.format(len(train_label), len(train_label2)))
     dict_train = {
         'sst': train_sst,
@@ -83,7 +83,7 @@ def load_data():
     return train_dataset, valid_dataset
 
 
-def load_train_data(which_data='soda', split_num=960, which_num=0):
+def load_train_data(which_data='soda', split_num=600, which_num=0):
     if 'soda' in which_data.lower():
         train_sst = np.nan_to_num(np.load(args['soda_sst'])['sst'][:split_num + 36])
         train_t300 = np.nan_to_num(np.load(args['soda_t300'])['t300'][:split_num + 36])
@@ -112,7 +112,7 @@ def load_train_data(which_data='soda', split_num=960, which_num=0):
     return train_dataset
 
 
-def load_val_data(which_data='soda', split_num=960, which_num=0):
+def load_val_data(which_data='soda', split_num=600, which_num=0):
     if 'soda' in which_data.lower():
         val_sst = np.nan_to_num(np.load(args['soda_sst'])['sst'][split_num:])
         val_t300 = np.nan_to_num(np.load(args['soda_t300'])['t300'][split_num:])

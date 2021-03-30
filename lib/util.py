@@ -37,8 +37,8 @@ def get_memory_usage(device):
 
 
 # NINO3.4区（170°W-120°W，5°S-5°N）
-def nino_index(ssta_year, keep_dim=False):
-    if not keep_dim:
+def nino_index(ssta_year, shrink_month=True):
+    if shrink_month:
         batch, months, h, w = ssta_year.size()
     else:
         batch, months, h, w = ssta_year.size()

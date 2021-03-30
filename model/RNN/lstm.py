@@ -19,7 +19,7 @@ class lstmNN(nn.Module):
         self.drop = nn.Dropout(0.5)
 
     def forward(self, sst, t300, ua, va, month=None):
-        ninos = nino_index(sst, keep_dim=True)
+        ninos = nino_index(sst, shrink_month=False)
         months = month / 12
         base_feature = torch.stack([ninos, months], dim=2)
         _, base_feature = self.nino_lstm(base_feature)

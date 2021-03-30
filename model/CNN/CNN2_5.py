@@ -78,7 +78,8 @@ class CNN2_5(nn.Module):
         x = torch.flatten(x, start_dim=1)
         x = self.drop(x)
 
-        n = self.embedding(n)
+        n = n[:, :1].long()
+        n = self.embedding(n).squeeze(1)
         Z = nn.Sigmoid()(self.reset_gate_x(x) + self.reset_gate_n(n))
         R = nn.Sigmoid()(self.update_gate_x(x) + self.update_gate_n(n))
         n_tilda = torch.tanh(self.select_gate_x(x) + self.select_gate_n(R * n))
